@@ -13,5 +13,8 @@ else
   include etc/config.mk
   etc/config.mk:etc/config.mk.default;$(PRECMD) cp $< $@
   unconfigure:;rm etc/config.mk
+
+  include etc/make/common.mk
+  $(foreach T,$(TARGETS),$(eval include etc/target/$T.mk))
   
 endif
