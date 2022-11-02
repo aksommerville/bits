@@ -23,9 +23,9 @@
     <menu title="AMainMenu" systemMenu="main" id="29">
       <items>
         <menuItem title="Full Moon" id="56">
-          <menu key="submenu" title="Full Moon" systemMenu="apple" id="57">
+          <menu key="submenu" title="AKBits" systemMenu="apple" id="57">
             <items>
-              <menuItem title="About Full Moon" id="58">
+              <menuItem title="About AKBits" id="58">
                 <modifierMask key="keyEquivalentModifierMask"/>
                 <connections>
                   <action selector="orderFrontStandardAboutPanel:" target="-2" id="142"/>
@@ -44,7 +44,7 @@
               <menuItem isSeparatorItem="YES" id="144">
                 <modifierMask key="keyEquivalentModifierMask" command="YES"/>
               </menuItem>
-              <menuItem title="Hide Full Moon" keyEquivalent="h" id="134">
+              <menuItem title="Hide AKBits" keyEquivalent="h" id="134">
                 <connections>
                   <action selector="hide:" target="-1" id="367"/>
                 </connections>
@@ -63,7 +63,7 @@
               <menuItem isSeparatorItem="YES" id="149">
                 <modifierMask key="keyEquivalentModifierMask" command="YES"/>
               </menuItem>
-              <menuItem title="Quit Full Moon" keyEquivalent="q" id="136">
+              <menuItem title="Quit AKBits" keyEquivalent="q" id="136">
                 <connections>
                   <action selector="terminate:" target="-3" id="449"/>
                 </connections>

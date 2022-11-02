@@ -8,27 +8,28 @@ macos_UNITS:=demo serial platform/macos
 macos_CCDEF:=$(call DEFUNITS,$(macos_UNITS))
 macos_CCINC:=-Isrc -I$(macos_MIDDIR)
 macos_CCOPT:=-c -MMD -O3
-macos_CCWARN:=-Werror -Wimplicit -Wno-parentheses -Wno-pointer-sign
+macos_CCWARN:=-Werror -Wimplicit -Wno-parentheses -Wno-pointer-sign -Wno-comment
 macos_CC:=gcc $(macos_CCOPT) $(macos_CCDEF) $(macos_CCINC) $(macos_CCWARN)
 macos_CXX:=g++ $(macos_CCOPT) $(macos_CCDEF) $(macos_CCINC) $(macos_CCWARN)
 macos_OBJC:=gcc -xobjective-c $(macos_CCOPT) $(macos_CCDEF) $(macos_CCINC) $(macos_CCWARN)
 macos_AS:=gcc -xassembler-with-cpp $(macos_CCOPT) $(macos_CCDEF) $(macos_CCINC) $(macos_CCWARN)
 macos_AR:=ar rc
 macos_LD:=gcc
-macos_LDPOST:=
+macos_LDPOST:=-framework Cocoa
 
 # This can accept files under macos_MIDDIR too, if you want to generate source files.
 macos_SRCFILES:=$(filter $(addprefix src/,$(addsuffix /%,$(macos_UNITS))),$(SRCFILES))
 
 macos_CFILES:=$(filter %.c %.cxx %.m %.S,$(macos_SRCFILES))
 macos_OFILES:=$(patsubst src/%,$(macos_MIDDIR)/%,$(addsuffix .o,$(basename $(macos_CFILES))))
+-include $(macos_OFILES:.o=.d)
 $(eval $(call COMPILE,$(macos_MIDDIR),.c,$(macos_CC) -o $$@ $$<))
 $(eval $(call COMPILE,$(macos_MIDDIR),.cxx,$(macos_CXX) -o $$@ $$<))
 $(eval $(call COMPILE,$(macos_MIDDIR),.m,$(macos_OBJC) -o $$@ $$<))
 $(eval $(call COMPILE,$(macos_MIDDIR),.S,$(macos_AS) -o $$@ $$<))
 
 # "cli" or "gui", which block below to invoke for the executable.
-macos_EXE_STYLE:=cli
+macos_EXE_STYLE:=gui
 
 # For a non-GUI command line app.
 # Most PCs work about like this.
