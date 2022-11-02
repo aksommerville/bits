@@ -15,7 +15,7 @@ macos_OBJC:=gcc -xobjective-c $(macos_CCOPT) $(macos_CCDEF) $(macos_CCINC) $(mac
 macos_AS:=gcc -xassembler-with-cpp $(macos_CCOPT) $(macos_CCDEF) $(macos_CCINC) $(macos_CCWARN)
 macos_AR:=ar rc
 macos_LD:=gcc
-macos_LDPOST:=-framework Cocoa
+macos_LDPOST:=-framework Cocoa -framework Quartz
 
 # This can accept files under macos_MIDDIR too, if you want to generate source files.
 macos_SRCFILES:=$(filter $(addprefix src/,$(addsuffix /%,$(macos_UNITS))),$(SRCFILES))

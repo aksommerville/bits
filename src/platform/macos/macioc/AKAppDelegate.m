@@ -14,13 +14,12 @@
     }
     macioc.delegate.init=0;
   }
-  /**
-  [NSThread detachNewThreadSelector:@selector(mainLoop:) toTarget:self withObject:nil];
-  /**/
 
   if (macioc.delegate.update&&(macioc.delegate.rate>0)) {
     uint64_t interval=1000000000/macioc.delegate.rate;
-    dispatch_queue_global_t q=dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE,0);
+    // Must be "main_queue" not "global_queue", so updates happen on the main thread.
+    // (Cocoa is picky about this).
+    dispatch_queue_main_t q=dispatch_get_main_queue();
     dispatch_source_t source=dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER,0,0,q);
     dispatch_source_set_timer(source,dispatch_time(DISPATCH_TIME_NOW,0),interval,0);
     dispatch_source_set_event_handler(source,^(){ macioc.delegate.update(macioc.delegate.userdata); });

@@ -41,7 +41,13 @@
     self.title=[NSString stringWithUTF8String:title];
   }
 
-  //self.contentView=[[AKView alloc] init]; //TODO
+  switch (macwm->rendermode) {
+    case MACWM_RENDERMODE_FRAMEBUFFER: self.contentView=[[AKFramebufferView alloc] initWithWidth:macwm->fbw height:macwm->fbh]; break;
+    case MACWM_RENDERMODE_OPENGL: self.contentView=[[AKOpenGLView alloc] init]; break;
+    case MACWM_RENDERMODE_METAL: self.contentView=[[AKMetalView alloc] init]; break;
+    default: fprintf(stderr,"Unsupported macwm.rendermode %d\n",macwm->rendermode);
+  }
+  if (!self.contentView) return 0;
 
   if (macwm->fullscreen) {
     [self toggleFullScreen:self];
@@ -65,6 +71,16 @@
 }
 
 -(void)windowDidResignKey:(NSWindow*)window {
+  macwm_release_keys(macwm);
+}
+
+-(void)windowDidEnterFullScreen:(NSNotification*)note {
+  macwm->fullscreen=1;
+  macwm_release_keys(macwm);
+}
+
+-(void)windowDidExitFullScreen:(NSNotification*)note {
+  macwm->fullscreen=0;
   macwm_release_keys(macwm);
 }
 

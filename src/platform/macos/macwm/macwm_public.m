@@ -26,10 +26,14 @@ struct macwm *macwm_new(
     macwm->w=setup->w;
     macwm->h=setup->h;
     macwm->fullscreen=setup->fullscreen?1:0;
+    macwm->rendermode=setup->rendermode;
+    macwm->fbw=setup->fbw;
+    macwm->fbh=setup->fbh;
     title=setup->title;
   }
   if (macwm->w<1) macwm->w=100;
   if (macwm->h<1) macwm->h=100;
+  if (!macwm->rendermode) macwm->rendermode=MACWM_RENDERMODE_FRAMEBUFFER;
 
   if (!(macwm->window=[[AKWindow alloc] initWithOwner:macwm title:title])) {
     macwm_del(macwm);
@@ -110,4 +114,16 @@ void macwm_unregister_key(struct macwm *macwm,int keycode) {
       return;
     }
   }
+}
+
+/* Send framebuffer.
+ */
+ 
+void macwm_send_framebuffer(struct macwm *macwm,const void *fb) {
+  if (!macwm||!fb) return;
+  if (macwm->rendermode!=MACWM_RENDERMODE_FRAMEBUFFER) return;
+  AKFramebufferView *view=macwm->window.contentView;
+  if (view->read_in_progress) return;
+  view->fb=fb;
+  view.needsDisplay=1;
 }

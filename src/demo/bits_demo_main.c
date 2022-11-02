@@ -1,6 +1,14 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 #include <sys/time.h>
+
+/* Some trivial software rendering, just to see what's up.
+ */
+
+#define FBW 160
+#define FBH 90
+static uint8_t fb[FBW*FBH*4]={0};
 
 /* Window manager.
  */
@@ -57,12 +65,14 @@ static int64_t now() {
 }
 
 static void ioc_cb_quit(void *userdata) {
-  int64_t endtime=now();
-  if (endtime>starttime) {
-    int64_t elapsedus=endtime-starttime;
-    double elapseds=elapsedus/1000000.0;
-    double rate=updatec/elapseds;
-    fprintf(stderr,"%s updatec=%d elapsed=%.03fs avg=%.03fHz\n",__func__,updatec,elapseds,rate);
+  if (updatec>0) {
+    int64_t endtime=now();
+    if (endtime>starttime) {
+      int64_t elapsedus=endtime-starttime;
+      double elapseds=elapsedus/1000000.0;
+      double rate=updatec/elapseds;
+      fprintf(stderr,"%s updatec=%d elapsed=%.03fs avg=%.03fHz\n",__func__,updatec,elapseds,rate);
+    }
   }
 
   #if BITS_USE_platform_macos
@@ -92,6 +102,9 @@ static int ioc_cb_init(void *userdata) {
       .h=360,
       .fullscreen=0,
       .title="AK Bits Demo",
+      .rendermode=MACWM_RENDERMODE_FRAMEBUFFER,
+      .fbw=FBW,
+      .fbh=FBH,
     };
     if (!(macwm=macwm_new(&macwm_delegate,&macwm_setup))) {
       fprintf(stderr,"Failed to initialize macwm\n");
@@ -103,8 +116,17 @@ static int ioc_cb_init(void *userdata) {
   return 0;
 }
 
+static uint8_t luma=0x80;
+
 static void ioc_cb_update(void *userdata) {
   //fprintf(stderr,"%s\n",__func__);
+
+  luma++;
+  memset(fb,luma,sizeof(fb));
+  
+  #if BITS_USE_platform_macos
+    macwm_send_framebuffer(macwm,fb);
+  #endif
   updatec++;
 }
 

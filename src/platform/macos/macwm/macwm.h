@@ -2,12 +2,17 @@
  * Interface to MacOS window manager.
  * Single window.
  * You must establish contact with the operating system (eg with 'macioc').
+ * Link: -framework Cocoa -framework Quartz
  */
 
 #ifndef MACWM_H
 #define MACWM_H
 
 struct macwm;
+
+#define MACWM_RENDERMODE_FRAMEBUFFER 1
+#define MACWM_RENDERMODE_OPENGL 2
+#define MACWM_RENDERMODE_METAL 3
 
 struct macwm_delegate {
   void *userdata;
@@ -21,9 +26,11 @@ struct macwm_delegate {
 };
 
 struct macwm_setup {
-  int w,h;
+  int w,h; // Window size, or we make something up.
   int fullscreen;
   const char *title;
+  int rendermode;
+  int fbw,fbh; // Required for MACWM_RENDERMODE_FRAMEBUFFER, ignored otherwise.
 };
 
 void macwm_del(struct macwm *macwm);
@@ -43,7 +50,12 @@ void macwm_set_fullscreen(struct macwm *macwm,int state);
 
 int macwm_update(struct macwm *macwm);
 
-//TODO rendering. are we doing framebuffers, opengl, metal....
+/* Valid for MACWM_RENDERMODE_FRAMEBUFFER only.
+ * (fb) must be 32-bit RGBX at the size declared at new().
+ * The image is not necessarily committed synchronously!
+ * You must arrange to keep (fb) constant for a little while after.
+ */
+void macwm_send_framebuffer(struct macwm *macwm,const void *fb);
 
 #define MACWM_MBUTTON_LEFT 0
 #define MACWM_MBUTTON_RIGHT 1

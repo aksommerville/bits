@@ -17,9 +17,25 @@ struct macwm {
   int modifiers;
   int keyv[MACWM_KEY_LIMIT];
   int keyc;
+  int rendermode;
+  int fbw,fbh; // MACWM_RENDERMODE_FRAMEBUFFER only
 };
 
 void macwm_register_key(struct macwm *macwm,int keycode);
 void macwm_unregister_key(struct macwm *macwm,int keycode);
+
+@interface AKFramebufferView : NSView {
+@public
+  const void *fb;
+  int read_in_progress;
+}
+-(id)initWithWidth:(int)width height:(int)height;
+@end
+
+@interface AKOpenGLView : NSView
+@end
+
+@interface AKMetalView : NSView
+@end
 
 #endif
