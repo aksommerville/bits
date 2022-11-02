@@ -2,7 +2,7 @@
  * Interface to MacOS window manager.
  * Single window.
  * You must establish contact with the operating system (eg with 'macioc').
- * Link: -framework Cocoa -framework Quartz
+ * Link: -framework Cocoa -framework Quartz -framework OpenGL -framework MetalKit -framework Metal -framework CoreGraphics
  */
 
 #ifndef MACWM_H
@@ -56,6 +56,12 @@ int macwm_update(struct macwm *macwm);
  * You must arrange to keep (fb) constant for a little while after.
  */
 void macwm_send_framebuffer(struct macwm *macwm,const void *fb);
+
+/* Valid for MACWM_RENDERMODE_OPENGL and MACWM_RENDERMODE_METAL.
+ * All render calls should happen between begin and end.
+ */
+int macwm_render_begin(struct macwm *macwm);
+void macwm_render_end(struct macwm *macwm);
 
 #define MACWM_MBUTTON_LEFT 0
 #define MACWM_MBUTTON_RIGHT 1

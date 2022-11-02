@@ -127,3 +127,33 @@ void macwm_send_framebuffer(struct macwm *macwm,const void *fb) {
   view->fb=fb;
   view.needsDisplay=1;
 }
+
+/* Begin/end GX frame.
+ */
+ 
+int macwm_render_begin(struct macwm *macwm) {
+  if (!macwm) return -1;
+  switch (macwm->rendermode) {
+    case MACWM_RENDERMODE_OPENGL: {
+        [(AKOpenGLView*)macwm->window.contentView beginFrame];
+        return 0;
+      }
+    case MACWM_RENDERMODE_METAL: {
+        break;//TODO
+      }
+  }
+  return -1;
+}
+
+void macwm_render_end(struct macwm *macwm) {
+  if (!macwm) return;
+  switch (macwm->rendermode) {
+    case MACWM_RENDERMODE_OPENGL: {
+        [(AKOpenGLView*)macwm->window.contentView endFrame];
+        break;
+      }
+    case MACWM_RENDERMODE_METAL: {
+        break;//TODO
+      }
+  }
+}

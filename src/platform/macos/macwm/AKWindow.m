@@ -43,7 +43,7 @@
 
   switch (macwm->rendermode) {
     case MACWM_RENDERMODE_FRAMEBUFFER: self.contentView=[[AKFramebufferView alloc] initWithWidth:macwm->fbw height:macwm->fbh]; break;
-    case MACWM_RENDERMODE_OPENGL: self.contentView=[[AKOpenGLView alloc] init]; break;
+    case MACWM_RENDERMODE_OPENGL: self.contentView=[[AKOpenGLView alloc] initWithWidth:macwm->w height:macwm->h]; break;
     case MACWM_RENDERMODE_METAL: self.contentView=[[AKMetalView alloc] init]; break;
     default: fprintf(stderr,"Unsupported macwm.rendermode %d\n",macwm->rendermode);
   }
@@ -62,6 +62,8 @@
  */
 
 -(NSSize)windowWillResize:(NSWindow*)window toSize:(NSSize)size {
+  macwm->w=size.width;
+  macwm->h=size.height;
   if (macwm->delegate.resize) macwm->delegate.resize(macwm->delegate.userdata,(int)size.width,(int)size.height);
   return size;
 }

@@ -3,6 +3,12 @@
 #include <string.h>
 #include <sys/time.h>
 
+#if BITS_USE_platform_macos
+  #include <OpenGL/gl.h>
+#else
+  #include <GL/gl.h>
+#endif
+
 /* Some trivial software rendering, just to see what's up.
  */
 
@@ -23,7 +29,7 @@ static void ioc_cb_close(void *userdata) {
 }
 
 static void ioc_cb_resize(void *userdata,int w,int h) {
-  fprintf(stderr,"%s %d,%d\n",__func__,w,h);
+  //fprintf(stderr,"%s %d,%d\n",__func__,w,h);
 }
 
 static int ioc_cb_key(void *userdata,int keycode,int value) {
@@ -102,7 +108,7 @@ static int ioc_cb_init(void *userdata) {
       .h=360,
       .fullscreen=0,
       .title="AK Bits Demo",
-      .rendermode=MACWM_RENDERMODE_FRAMEBUFFER,
+      .rendermode=MACWM_RENDERMODE_METAL, // _FRAMEBUFFER _OPENGL _METAL
       .fbw=FBW,
       .fbh=FBH,
     };
@@ -125,7 +131,24 @@ static void ioc_cb_update(void *userdata) {
   memset(fb,luma,sizeof(fb));
   
   #if BITS_USE_platform_macos
-    macwm_send_framebuffer(macwm,fb);
+    if (macwm_render_begin(macwm)>=0) {
+      //TODO render
+      int screenw,screenh;
+      macwm_get_size(&screenw,&screenh,macwm);
+      glClearColor(0.5f,0.25f,0.0f,1.0f);
+      glClear(GL_COLOR_BUFFER_BIT);
+      glViewport(0,0,screenw,screenh);
+      glMatrixMode(GL_PROJECTION);
+      glLoadIdentity();
+      glBegin(GL_TRIANGLES);
+        glColor4ub(0xff,0x00,0x00,0xff); glVertex2f( 0.5f, 0.5f);
+        glColor4ub(0x00,0xff,0x00,0xff); glVertex2f(-0.5f, 0.5f);
+        glColor4ub(0x00,0x00,0xff,0xff); glVertex2f( 0.0f,-0.5f);
+      glEnd();
+      macwm_render_end(macwm);
+    } else { // software rendering...
+      macwm_send_framebuffer(macwm,fb);
+    }
   #endif
   updatec++;
 }
