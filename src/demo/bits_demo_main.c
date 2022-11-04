@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <sys/time.h>
+#include <limits.h>
 
 #if BITS_USE_platform_macos
   #include <OpenGL/gl.h>
@@ -51,6 +52,57 @@ static void ioc_cb_mbutton(void *userdata,int btnid,int value) {
 
 static void ioc_cb_mwheel(void *userdata,int dx,int dy) {
   fprintf(stderr,"%s %+d,%+d\n",__func__,dx,dy);
+}
+
+/* Input manager.
+ */
+
+#if BITS_USE_platform_macos
+  #include "platform/macos/machid/machid.h"
+  static struct machid *machid=0;
+#endif
+
+static int ioc_devid_next=1;
+
+static int ioc_cb_devid_next(struct machid *machid) {
+  if (ioc_devid_next>=INT_MAX) return -1;
+  return ioc_devid_next++;
+}
+
+static int ioc_cb_filter(struct machid *machid,int vid,int pid,int page,int usage) {
+  fprintf(stderr,"%s %04x:%04x usage=%04x%04x\n",__func__,vid,pid,page,usage);
+  // Doing the same as machid's default. In real life, we wouldn't both implementing this.
+  if (page==0x0001) {
+    if (usage==0x0004) return 1;
+    if (usage==0x0005) return 1;
+  }
+  return 0;
+}
+
+static int ioc_cb_list_button(int btnid,int usage,int lo,int hi,int value,void *userdata) {
+  fprintf(stderr,
+    "  btnid=0x%08x usage=0x%08x range=%d..%d value=%d\n",
+    btnid,usage,lo,hi,value
+  );
+  return 0;
+}
+
+static void ioc_cb_connect(struct machid *machid,int devid) {
+  fprintf(stderr,"%s %d\n",__func__,devid);
+  #if BITS_USE_platform_macos
+    int vid=0,pid=0;
+    const char *name=machid_get_ids(&vid,&pid,machid,devid);
+    fprintf(stderr,"%04x:%04x %s\n",vid,pid,name);
+    machid_enumerate(machid,devid,ioc_cb_list_button,0);
+  #endif
+}
+
+static void ioc_cb_disconnect(struct machid *machid,int devid) {
+  fprintf(stderr,"%s %d\n",__func__,devid);
+}
+
+static void ioc_cb_button(struct machid *machid,int devid,int btnid,int value) {
+  fprintf(stderr,"%s %d.0x%08x=%d\n",__func__,devid,btnid,value);
 }
 
 /* Inversion-of-Control test.
@@ -108,12 +160,25 @@ static int ioc_cb_init(void *userdata) {
       .h=360,
       .fullscreen=0,
       .title="AK Bits Demo",
-      .rendermode=MACWM_RENDERMODE_METAL, // _FRAMEBUFFER _OPENGL _METAL
+      .rendermode=MACWM_RENDERMODE_FRAMEBUFFER, // _FRAMEBUFFER _OPENGL _METAL
       .fbw=FBW,
       .fbh=FBH,
     };
     if (!(macwm=macwm_new(&macwm_delegate,&macwm_setup))) {
       fprintf(stderr,"Failed to initialize macwm\n");
+      return -1;
+    }
+
+    struct machid_delegate machid_delegate={
+      .userdata=0,
+      .devid_next=ioc_cb_devid_next,
+      .filter=ioc_cb_filter,
+      .connect=ioc_cb_connect,
+      .disconnect=ioc_cb_disconnect,
+      .button=ioc_cb_button,
+    };
+    if (!(machid=machid_new(&machid_delegate))) {
+      fprintf(stderr,"Failed to initialize machid\n");
       return -1;
     }
   #endif
@@ -131,8 +196,13 @@ static void ioc_cb_update(void *userdata) {
   memset(fb,luma,sizeof(fb));
   
   #if BITS_USE_platform_macos
+
+    if (machid_update(machid,0.0)<0) {
+      fprintf(stderr,"machid_update failed\n");
+      macioc_terminate(1);
+    }
+  
     if (macwm_render_begin(macwm)>=0) {
-      //TODO render
       int screenw,screenh;
       macwm_get_size(&screenw,&screenh,macwm);
       glClearColor(0.5f,0.25f,0.0f,1.0f);
