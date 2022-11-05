@@ -3,6 +3,8 @@
 #include <string.h>
 #include <sys/time.h>
 #include <limits.h>
+#include <stdint.h>
+#include <math.h>
 
 #if BITS_USE_platform_macos
   #include <OpenGL/gl.h>
@@ -16,6 +18,41 @@
 #define FBW 160
 #define FBH 90
 static uint8_t fb[FBW*FBH*4]={0};
+
+/* Audio.
+ */
+
+#if BITS_USE_platform_macos
+  #include "platform/macos/macaudio/macaudio.h"
+  static struct macaudio *macaudio=0;
+#endif
+
+static double aup=0.0;
+#define NOTE_PITCH 440.0
+#define EXPECTED_SAMPLE_RATE 44100.0
+static double audp=(M_PI*2.0*NOTE_PITCH)/EXPECTED_SAMPLE_RATE;
+static double auddp=0.000001;
+static double audplo=0.010;
+static double audphi=0.100;
+
+static void ioc_cb_pcm_out(int16_t *v,int c,void *userdata) {
+  while (c>=2) {
+    v[0]=sin(aup)*10000.0;
+    v[1]=v[0];
+    v+=2;
+    c-=2;
+    aup+=audp;
+    if (aup>=M_PI) aup-=M_PI*2.0;
+    audp+=auddp;
+    if ((audp>audphi)&&(auddp>0.0)) auddp=-auddp;
+    else if ((audp<audplo)&&(auddp<0.0)) auddp=-auddp;
+  }
+  //memset(v,0,c<<1);
+}
+
+static void ioc_cb_midi_in(const void *v,int c,void *userdata) {
+  fprintf(stderr,"%s c=%d\n",__func__,c);
+}
 
 /* Window manager.
  */
@@ -134,7 +171,9 @@ static void ioc_cb_quit(void *userdata) {
   }
 
   #if BITS_USE_platform_macos
-    macwm_del(macwm);
+    macwm_del(macwm); macwm=0;
+    machid_del(machid); machid=0;
+    macaudio_del(macaudio); macaudio=0;
   #endif
 }
 
@@ -181,6 +220,21 @@ static int ioc_cb_init(void *userdata) {
       fprintf(stderr,"Failed to initialize machid\n");
       return -1;
     }
+
+    struct macaudio_delegate macaudio_delegate={
+      .userdata=0,
+      .pcm_out=ioc_cb_pcm_out,
+      .midi_in=ioc_cb_midi_in,
+    };
+    struct macaudio_setup macaudio_setup={
+      .rate=44100,
+      .chanc=2,
+    };
+    if (!(macaudio=macaudio_new(&macaudio_delegate,&macaudio_setup))) {
+      fprintf(stderr,"Failed to initialize macaudio\n");
+      return -1;
+    }
+    macaudio_play(macaudio,1);
   #endif
   
   starttime=now();

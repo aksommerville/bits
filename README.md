@@ -8,5 +8,6 @@ Any unit with additional concerns (libraries etc) should have a `README.md`.
 
 ## TODO
 
-- [ ] platform/macos/macwm/AKOpenGLView
+- [x] platform/macos/macwm/AKOpenGLView
 - [ ] platform/macos/macwm/AKMetalView
+- [ ] MacOS MIDI-In
