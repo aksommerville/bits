@@ -3,7 +3,7 @@
 macos_MIDDIR:=mid/macos
 macos_OUTDIR:=out/macos
 
-macos_UNITS:=demo serial platform/macos
+macos_UNITS:=demo serial platform/macos platform/hw
 
 macos_CCDEF:=$(call DEFUNITS,$(macos_UNITS))
 macos_CCINC:=-Isrc -I$(macos_MIDDIR)
