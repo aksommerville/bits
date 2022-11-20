@@ -3,7 +3,7 @@
 linux_MIDDIR:=mid/linux
 linux_OUTDIR:=out/linux
 
-linux_UNITS:=demo serial platform/linux platform/genioc platform/hw
+linux_UNITS:=demo serial format platform/linux platform/genioc platform/hw
 
 linux_CCDEF:=$(call DEFUNITS,$(linux_UNITS))
 linux_CCINC:=-Isrc -I$(linux_MIDDIR)
