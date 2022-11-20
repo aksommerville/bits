@@ -103,7 +103,13 @@ static int alsapcm_select_device_path(
   
   // Searching explicitly in "/dev/snd" forces return of an absolute path.
   // If we passed null instead, we'd get the same result, but the basename only.
-  if (!(alsapcm->device=alsapcm_find_device("/dev/snd",ratelo,ratehi,chanclo,chanchi))) return -1;
+  if (!(alsapcm->device=alsapcm_find_device("/dev/snd",ratelo,ratehi,chanclo,chanchi))) {
+    // If it failed with the exact setup params, that's ok, try again with the default ranges.
+    if (setup) {
+      if (alsapcm->device=alsapcm_find_device("/dev/snd",22050,48000,1,2)) return 0;
+    }
+    return -1;
+  }
   return 0;
 }
 

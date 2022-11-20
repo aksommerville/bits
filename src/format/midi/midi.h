@@ -118,7 +118,7 @@ int midi_file_advance(struct midi_file *file,int framec);
 #define MIDI_OPCODE_CONTROL        0xb0 /* (k,v) */
 #define MIDI_OPCODE_PROGRAM        0xc0 /* (pid) */
 #define MIDI_OPCODE_PRESSURE       0xd0 /* (pressure) */
-#define MIDI_OPCODE_WHEEL          0xe0 /* (hi7,lo7) */
+#define MIDI_OPCODE_WHEEL          0xe0 /* (lo7,hi7) */
 
 /* System and Realtime Opcodes.
  * SYSEX can appear in files, with some formatting quirks. Otherwise these are only for streams.
@@ -256,5 +256,7 @@ extern const char *midi_gm_family_names[16]; // key=(pid>>3)
 extern const char *midi_gm_drum_names[128]; // key=noteid
 int midi_noteid_repr(char *dst,int dsta,uint8_t noteid);
 int midi_noteid_eval(const char *src,int srcc);
+
+extern const float midi_note_frequency[128]; // key=noteid
 
 #endif
