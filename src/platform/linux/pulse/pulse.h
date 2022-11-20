@@ -1,6 +1,6 @@
 /* pulse.h
  * Wrapper around PulseAudio for PCM-Out.
- * Link: -lpulse
+ * Link: -lpulse-simple
  */
  
 #ifndef PULSE_H
