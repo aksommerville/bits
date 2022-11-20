@@ -15,7 +15,7 @@ linux_OBJC:=gcc -xobjective-c $(linux_CCOPT) $(linux_CCDEF) $(linux_CCINC) $(lin
 linux_AS:=gcc -xassembler-with-cpp $(linux_CCOPT) $(linux_CCDEF) $(linux_CCINC) $(linux_CCWARN)
 linux_AR:=ar rc
 linux_LD:=gcc
-linux_LDPOST:=-lm -lz -lasound
+linux_LDPOST:=-lm -lz -lpulse-simple
 
 # This can accept files under linux_MIDDIR too, if you want to generate source files.
 linux_SRCFILES:=$(filter $(addprefix src/,$(addsuffix /%,$(linux_UNITS))),$(SRCFILES))
