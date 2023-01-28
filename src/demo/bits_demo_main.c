@@ -140,6 +140,7 @@ int bits_demo_pulse(int argc,char **argv);
 int bits_demo_ossmidi(int argc,char **argv);
 int bits_demo_live_synth(int argc,char **argv);
 int bits_demo_akx11(int argc,char **argv);
+int bits_demo_akdrm(int argc,char **argv);
 
 int main(int argc,char **argv) {
 
@@ -149,7 +150,8 @@ int main(int argc,char **argv) {
   //return bits_demo_pulse(argc,argv);
   //return bits_demo_ossmidi(argc,argv);
   //return bits_demo_live_synth(argc,argv);
-  return bits_demo_akx11(argc,argv);
+  //return bits_demo_akx11(argc,argv);
+  return bits_demo_akdrm(argc,argv);
 
   // Default demo, using the high-level 'hw' interface.
   struct hw_delegate delegate={

@@ -3,7 +3,7 @@
  * Desktop systems should prefer PulseAudio if available.
  * We do not use libasound, we interact with device files directly.
  * I've observed pretty bad performance via libasound, no doubt due to poor configuration on my part,
- * but with the direct approach it performance much better.
+ * but with the direct approach it performs much better.
  * And it eliminates a dependency, which feels good.
  */
  

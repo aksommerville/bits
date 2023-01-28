@@ -11,7 +11,7 @@ struct ossmidi;
 
 /* Typical consumers should only implement (events).
  * We send Hello and Farewell as events, in addition to (connect) and (disconnect):
- *   - Hello: [0xf7,0xf0]
+ *   - Hello: [0xf0,0xf7]
  *   - Farewell: []
  * Implement the other three callbacks if you want to use an external poller,
  * and use ossmidi_update_fd() instead of ossmidi_update().

@@ -338,3 +338,23 @@ void akx11_scale_y8(void *dst,const void *src,int w,int h,int scale) {
     }
   }
 }
+
+/* Video mode descriptions.
+ */
+ 
+int akx11_video_mode_is_gx(int video_mode) {
+  switch (video_mode) {
+    case AKX11_VIDEO_MODE_OPENGL:
+      return 1;
+  }
+  return 0;
+}
+
+int akx11_video_mode_is_fb(int video_mode) {
+  switch (video_mode) {
+    case AKX11_VIDEO_MODE_FB_GX:
+    case AKX11_VIDEO_MODE_FB_PURE:
+      return 1;
+  }
+  return 0;
+}

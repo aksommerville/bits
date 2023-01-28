@@ -81,6 +81,9 @@ void akx11_end_fb(struct akx11 *akx11,void *fb);
 // Cursor is initially hidden.
 void akx11_show_cursor(struct akx11 *akx11,int show);
 
+void akx11_coord_fb_from_win(int *x,int *y,const struct akx11 *akx11);
+void akx11_coord_win_from_fb(int *x,int *y,const struct akx11 *akx11);
+
 // We take care of this for you, but just in case:
 int akx11_codepoint_from_keysym(int keysym);
 int akx11_usb_usage_from_keysym(int keysym);
@@ -88,5 +91,8 @@ int akx11_usb_usage_from_keysym(int keysym);
 // Currently all supported formats are stored LRTB, so you could get by with just stride.
 int akx11_fbfmt_measure_stride(int fbfmt,int w);
 int akx11_fbfmt_measure_buffer(int fbfmt,int w,int h);
+
+int akx11_video_mode_is_gx(int video_mode);
+int akx11_video_mode_is_fb(int video_mode);
 
 #endif

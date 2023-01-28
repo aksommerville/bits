@@ -43,7 +43,7 @@ static int ossmidi_check_file(struct ossmidi *ossmidi,const char *base,int basec
   if (ossmidi->delegate.connect) {
     ossmidi->delegate.connect(devid,fd,ossmidi->delegate.userdata);
   }
-  ossmidi->delegate.events(devid,"\xf7\xf0",2,ossmidi->delegate.userdata);
+  ossmidi->delegate.events(devid,"\xf0\xf7",2,ossmidi->delegate.userdata);
 
   return 0;
 }
@@ -118,7 +118,7 @@ static int ossmidi_update_device(struct ossmidi *ossmidi,int fd) {
     return 0;
   }
   // Ensure we do not accidentally send the Hello event.
-  if ((bufc==2)&&!memcmp(buf,"\xf7\xf0",2)) return 0;
+  if ((bufc==2)&&!memcmp(buf,"\xf0\xf7",2)) return 0;
   ossmidi->delegate.events(devid,buf,bufc,ossmidi->delegate.userdata);
   return 0;
 }

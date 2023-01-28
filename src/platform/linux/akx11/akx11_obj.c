@@ -405,3 +405,18 @@ void akx11_end_fb(struct akx11 *akx11,void *fb) {
       } break;
   }
 }
+
+/* Convert coordinates.
+ */
+ 
+void akx11_coord_fb_from_win(int *x,int *y,const struct akx11 *akx11) {
+  if ((akx11->dstw<1)||(akx11->dsth<1)||(akx11->fbw<1)||(akx11->fbh<1)) return;
+  (*x)=(((*x)-akx11->dstx)*akx11->fbw)/akx11->dstw;
+  (*y)=(((*y)-akx11->dsty)*akx11->fbh)/akx11->dsth;
+}
+
+void akx11_coord_win_from_fb(int *x,int *y,const struct akx11 *akx11) {
+  if ((akx11->dstw<1)||(akx11->dsth<1)||(akx11->fbw<1)||(akx11->fbh<1)) return;
+  *x=((*x)*akx11->dstw)/akx11->fbw+akx11->dstx;
+  *y=((*y)*akx11->dsth)/akx11->fbh+akx11->dsty;
+}

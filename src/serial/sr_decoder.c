@@ -14,6 +14,7 @@ int sr_decode_line(void *dstpp,struct sr_decoder *decoder) {
   int srcc=decoder->c-decoder->p;
   int srcp=0;
   while ((srcp<srcc)&&(src[srcp++]!=0x0a)) ;
+  decoder->p+=srcp;
   if (dstpp) *(const void**)dstpp=src;
   return srcp;
 }
