@@ -42,6 +42,9 @@ int midi_stream_reader_next(struct midi_event *event,struct midi_stream_reader *
  * Decoding is pretty cheap; it's reasonable to decode all your songs to midi_file at startup.
  *****************************************************************************/
  
+! review required !
+I'm using this in fullmoon4, and there are timing problems.
+ 
 struct midi_file {
   int refc;
   uint8_t *v;

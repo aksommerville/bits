@@ -1,4 +1,14 @@
 /* png.h
+ * Minimal PNG decoder and encoder.
+ *
+ * Deviations from spec:
+ *   - We do not allow interlacing.
+ *   - We do not validate CRCs at decode.
+ *   - Hard-coded size sanity limit (8192 pixels per axis)
+ * We offer universal reformatting, but it's wildly inefficient.
+ * Encoding, we use the SUB filter on every row. It's fast and simple but produces suboptimal output.
+ *
+ * Link: -lz
  */
 
 #ifndef PNG_H
@@ -6,12 +16,19 @@
 
 #include <stdint.h>
 
+#define PNG_CHUNKID_IHDR (('I'<<24)|('H'<<16)|('D'<<8)|'R')
+#define PNG_CHUNKID_IDAT (('I'<<24)|('D'<<16)|('A'<<8)|'T')
+#define PNG_CHUNKID_IEND (('I'<<24)|('E'<<16)|('N'<<8)|'D')
+#define PNG_CHUNKID_PLTE (('P'<<24)|('L'<<16)|('T'<<8)|'E')
+#define PNG_CHUNKID_tRNS (('t'<<24)|('R'<<16)|('N'<<8)|'S')
+
 /* Image object.
  ****************************************************************************/
 
 struct png_image {
   int refc;
   void *pixels;
+  int ownpixels;
   int w,h;
   int stride; // bytes
 
@@ -24,6 +41,8 @@ struct png_image {
     int c;
   } *chunkv;
   int chunkc,chunka;
+  
+  struct png_image *keepalive;
 };
 
 void png_image_del(struct png_image *image);
@@ -34,7 +53,8 @@ int png_image_ref(struct png_image *image);
 struct png_image *png_image_new(int w,int h,uint8_t depth,uint8_t colortype);
 
 /* Crop, pad, or reformat an image.
- * Zeroes to use a default, eg png_image_reformat(image,0,0,0,0,0,0,0) is guaranteed to only retain image.
+ * Zeroes to use a default, eg png_image_reformat(image,0,0,0,0,0,0,0) is guaranteed to only retain or copy image.
+ * (Note that zero is a legal colortype. We treat colortype==0 as "default" only when depth is also zero).
  * If (always_copy), we produce a fresh image even if retaining was possible.
  * In general, extra chunks are dropped here. We do copy or generate PLTE and tRNS, if needed.
  */
@@ -70,6 +90,10 @@ void png_depth_colortype_luma(uint8_t *depth,uint8_t *colortype);
 void png_depth_colortype_rgb(uint8_t *depth,uint8_t *colortype);
 void png_depth_colortype_alpha(uint8_t *depth,uint8_t *colortype);
 void png_depth_colortype_opaque(uint8_t *depth,uint8_t *colortype);
+int png_channel_count_for_colortype(uint8_t colortype);
+
+// Copies (v) and adds to the end of (image)'s chunk list.
+int png_image_add_chunk(struct png_image *image,uint32_t chunkid,const void *v,int c);
 
 /* Decode.
  ****************************************************************************/
@@ -88,7 +112,7 @@ struct png_decoder *png_decoder_new();
  * Finishing *does not* delete the decoder, you have to do that too.
  */
 int png_decode_more(struct png_decoder *decoder,const void *src,int srcc);
-struct png_imaage *png_decode_finish(struct png_decoder *decoder);
+struct png_image *png_decode_finish(struct png_decoder *decoder); // => STRONG
 
 /* Encode.
  * We only offer one-shot encoding, you need enough memory to hold the entire encoded image.
