@@ -1,36 +1,49 @@
-# AK Sommerville's Bits
+# Bits
 
-Reusable code I can yoink from for future projects.
-
-Trying to keep everything portable. Ideally each directory anywhere under `src` can compile alone.
-
-Any unit with additional concerns (libraries etc) should have a `README.md`.
-
-## Overview
-
-- src/serial: Encoder and decoder. JSON, text, hashing.
-- src/format: File formats.
-- - png
-- - midi
-- src/platform: Hardware interfaces peculiar to a platform.
-- - hw: Generic interface layer. Manages driver selection, makes the drivers look alike, etc.
-- - macos
-- - - macioc: Requires plist and nib, provides AppDelegate and main.
-- - - macwm: Single window with or without GX.
-- - - macaudio: PCM out
-- - - machid: HID in
-- - linux
-- - - x11
-- - - drm
-- - - alsa
-- - - pulse
-- - - evdev
-- - genioc: Generic IoC interface for platforms that don't actually need one.
+Things we can copy, try to keep them self-contained.
 
 ## TODO
 
-- [x] platform/macos/macwm/AKOpenGLView
-- [ ] platform/macos/macwm/AKMetalView
-- [ ] MacOS MIDI-In
-- [ ] macioc: I added arg() to genioc, should there be a corrollary in macioc?
-- [ ] hw glue for linux io units
+- [x] serial
+- - [x] Text primitives
+- - [x] JSON
+- - [x] Encoder, decoder
+- - [x] base64
+- - [x] urlencode
+- - [x] md5
+- - [x] sha1
+- [ ] Image formats
+- - [ ] png
+- - [ ] qoi
+- - [ ] ico
+- - [ ] bmp
+- - [ ] gif
+- - [ ] rlead
+- - [ ] rawimg: LRTB byte-aligned rows, pixel size a factor or multiple of 8, 16-bit dimensions. Uncompressed.
+- [x] midi: File reader, stream reader, and constants
+- [ ] wav
+- [ ] Drivers with private interfaces
+- - [ ] evdev
+- - [ ] x11fb
+- - [ ] glx
+- - [ ] drmfb
+- - [ ] drmgx
+- - [ ] bcm
+- - [ ] alsafd
+- - [ ] alsaas
+- - [ ] pulse
+- - [ ] ossmidi
+- - [ ] macioc
+- - [ ] macwm
+- - [ ] macaudio
+- - [ ] machid
+- - [ ] mswm
+- - [ ] msaudio
+- - [ ] mshid
+- [ ] Host IO abstraction
+- [ ] wasm-micro-runtime client
+- [ ] quickjs client
+- [ ] libjpeg client
+- [ ] HTTP server and client
+- [ ] WebSocket
+- [x] Filesystem conveniences
