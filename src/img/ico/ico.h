@@ -1,4 +1,8 @@
 /* ico.h
+ * Required: serial
+ * Optional: png bmp
+ * Note that we are not useful without at least one of (png,bmp); ico is just a container format.
+ *
  * Minimal interface to Microsoft Icon files.
  * Used by "favicon.ico", and I like them as general-purpose multi-size icons.
  */
@@ -11,8 +15,9 @@ struct sr_encoder;
 struct ico_file {
   struct ico_image {
     void *v;
-    int w,h;
-    int stride;
+    int w,h; // Present before decode. Max 256.
+    int stride; // Absent until decode.
+    int ctc,planec,pixelsize; // Before decode.
     int format;
     void *serial;
     int serialc;
@@ -24,7 +29,7 @@ void ico_image_cleanup(struct ico_image *image);
 void ico_file_cleanup(struct ico_file *file);
 void ico_file_del(struct ico_file *file);
 
-int ico_encode(struct sr_encoder *dst,const struct ico_file *file);
+int ico_encode(struct sr_encoder *dst,struct ico_file *file);
 
 struct ico_file *ico_decode(const void *src,int srcc);
 
@@ -44,5 +49,11 @@ int ico_image_decode(struct ico_image *image);
  * Redundant calls are cheap and harmless.
  */
 void ico_image_dirty(struct ico_image *image);
+
+/* Plain "add_image" allocates an RGBA pixel buffer.
+ * "uninitialized" leaves the whole thing zeroed.
+ */
+struct ico_image *ico_file_add_image(struct ico_file *file,int w,int h);
+struct ico_image *ico_file_add_uninitialized_image(struct ico_file *file);
 
 #endif

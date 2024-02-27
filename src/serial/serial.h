@@ -100,6 +100,7 @@ int sr_encoder_terminate(struct sr_encoder *encoder);
 
 int sr_encode_raw(struct sr_encoder *encoder,const void *src,int srcc);
 int sr_encode_fmt(struct sr_encoder *encoder,const char *fmt,...);
+int sr_encode_zero(struct sr_encoder *encoder,int c);
 
 int sr_encode_u8(struct sr_encoder *encoder,int v);
 int sr_encode_intbe(struct sr_encoder *encoder,int v,int size);

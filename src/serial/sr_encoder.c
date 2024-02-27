@@ -70,6 +70,17 @@ int sr_encode_fmt(struct sr_encoder *encoder,const char *fmt,...) {
   }
 }
 
+/* Append zeroes.
+ */
+
+int sr_encode_zero(struct sr_encoder *encoder,int c) {
+  if (c<1) return 0;
+  if (sr_encoder_require(encoder,c)<0) return -1;
+  memset(ENCV+encoder->c,0,c);
+  encoder->c+=c;
+  return 0;
+}
+
 /* Encode binary scalars.
  */
 
@@ -97,7 +108,6 @@ int sr_encode_intle(struct sr_encoder *encoder,int v,int size) {
     ENCV[encoder->c++]=v;
     v>>=8;
   }
-  encoder->c+=size;
   return 0;
 }
 

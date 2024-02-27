@@ -1,4 +1,5 @@
 #include "fs.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
@@ -22,7 +23,7 @@
  */
 
 int file_read(void *dstpp,const char *path) {
-  if (!dstpp||path||!path[0]) return -1;
+  if (!dstpp||!path||!path[0]) return -1;
   int fd=open(path,O_RDONLY|O_BINARY);
   if (fd<0) return -1;
   off_t flen=lseek(fd,0,SEEK_END);

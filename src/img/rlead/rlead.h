@@ -18,8 +18,8 @@ struct rlead_image {
 void rlead_image_cleanup(struct rlead_image *image);
 void rlead_image_del(struct rlead_image *image);
 
-int rlead_image_encode(struct sr_encoder *dst,const struct rlead_image *image);
+int rlead_encode(struct sr_encoder *dst,const struct rlead_image *image);
 
-struct rlead_image *rlead_image_decode(const void *src,int srcc);
+struct rlead_image *rlead_decode(const void *src,int srcc);
 
 #endif

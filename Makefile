@@ -15,6 +15,13 @@ OBJC:=$(CC) -xobjective-c
 AS:=$(CC) -xassembler-with-cpp
 CXX:=g++ -c -MMD -O3 -Isrc -Imid -Werror -Wimplicit
 LD:=gcc
+LDPOST:=-lm -lz
+
+# Declare all the "optional" units as in-use.
+USE_ALL_OPT:=$(patsubst %,-DUSE_%=1, \
+  midi serial fs hostio http gif bmp rawimg qoi rlead ico png wamr qjs \
+)
+CC+=$(USE_ALL_OPT)
 
 mid/%.o:src/%.c;$(PRECMD) $(CC) -o$@ $<
 mid/%.o:src/%.m;$(PRECMD) $(OBJC) -o$@ $<
@@ -25,9 +32,9 @@ mid/%.o:src/%.cxx;$(PRECMD) $(CXX) -o$@ $<
 # Tests.
 
 # Same CC for unit, integration, and common. We could split those up if needed, but shouldn't be a need.
-CC_TEST:=gcc -c -MMD -O0 -Isrc -Imid -Werror -Wimplicit
+CC_TEST:=gcc -c -MMD -O0 -Isrc -Imid -Werror -Wimplicit $(USE_ALL_OPT)
 LD_ITEST:=gcc
-LDPOST_ITEST:=-lm
+LDPOST_ITEST:=$(LDPOST)
 LD_UTEST:=gcc
 LDPOST_UTEST:=-lm
 
