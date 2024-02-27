@@ -12,14 +12,14 @@ Things we can copy, try to keep them self-contained.
 - - [x] urlencode
 - - [x] md5
 - - [x] sha1
-- [ ] Image formats
-- - [ ] png
-- - [ ] qoi
-- - [ ] ico
-- - [ ] bmp
-- - [ ] gif
-- - [ ] rlead
-- - [ ] rawimg: LRTB byte-aligned rows, pixel size a factor or multiple of 8, 16-bit dimensions. Uncompressed.
+- [x] Image formats
+- - [x] png
+- - [x] qoi
+- - [x] ico
+- - [x] bmp
+- - [x] gif
+- - [x] rlead
+- - [x] rawimg: LRTB byte-aligned rows, pixel size a factor or multiple of 8, 16-bit dimensions. Uncompressed.
 - [x] midi: File reader, stream reader, and constants
 - [ ] wav
 - [ ] Drivers with private interfaces

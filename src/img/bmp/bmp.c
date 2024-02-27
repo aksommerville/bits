@@ -46,15 +46,36 @@ int bmp_encode(struct sr_encoder *dst,const struct bmp_image *image,int skip_fil
   if (sr_encode_raw(dst,&image->amask,4)<0) return -1;
   if (sr_encode_zero(dst,68)<0) return -1;
   
-  //TODO This might be wrong... Our in-memory color table is red-first. I'm not sure how it goes in the encoded file.
-  if (sr_encode_raw(dst,image->ctab,image->ctabc*4)<0) return -1;
+  /* Color table for BMP should be (B,G,R,A). Unclear whether A gets used or is a dummy.
+   */
+  if (image->ctabc>0) {
+    const uint8_t *src=image->ctab;
+    int i=image->ctabc;
+    for (;i-->0;src+=4) {
+      if (sr_encode_u8(dst,src[2])<0) return -1;
+      if (sr_encode_u8(dst,src[1])<0) return -1;
+      if (sr_encode_u8(dst,src[0])<0) return -1;
+      if (sr_encode_u8(dst,src[3])<0) return -1;
+    }
+  }
   
   int lensofar=dst->c-dstc0;
   if (lensofar&3) {
     if (sr_encode_raw(dst,"\0\0\0\0",4-(lensofar&3))<0) return -1;
   }
   int pstart=dst->c-dstc0;
-  if (sr_encode_raw(dst,image->v,image->stride*image->h)<0) return -1;
+  // Pad stride to 4 bytes if necessary.
+  if (image->stride&3) {
+    int dststride=(image->stride+3)&~3;
+    const uint8_t *row=image->v;
+    int yi=image->h;
+    for (;yi-->0;row+=image->stride) {
+      if (sr_encode_raw(dst,row,image->stride)<0) return -1;
+      if (sr_encode_zero(dst,dststride-image->stride)<0) return -1;
+    }
+  } else {
+    if (sr_encode_raw(dst,image->v,image->stride*image->h)<0) return -1;
+  }
   int flen=dst->c-dstc0;
   
   if (!skip_file_header) {
@@ -436,6 +457,8 @@ int bmp_force_png_format(struct bmp_image *image) {
   
   /* 24-bit pixels, swizzle channels as needed.
    * Realistically it will only be (0<~>2) or nothing.
+   * I'm finding that GIMP at least, ignores the masks and assumes BGR always.
+   * So if masks are unset, assume the same.
    */
   if (image->pixelsize==24) {
     if ((image->rmask==0x0000ff)&&(image->gmask==0x00ff00)&&(image->bmask==0xff0000)) return 0;
@@ -443,7 +466,8 @@ int bmp_force_png_format(struct bmp_image *image) {
       bmp_swizzle3_02(image);
       return 0;
     }
-    return -1;
+    bmp_swizzle3_02(image);
+    return 0;
   }
   
   /* 32-bit pixels, swizzle as needed.

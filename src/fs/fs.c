@@ -153,6 +153,7 @@ int dir_mkdir(const char *path) {
 int dir_mkdirp(const char *path) {
   if (!path||!path[0]) return -1;
   if (mkdir(path,0775)>=0) return 0;
+  if (errno==EEXIST) return 0;
   if (errno!=ENOENT) return -1;
   int sepp=path_split(path,-1);
   if (sepp<=0) return -1;

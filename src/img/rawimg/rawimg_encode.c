@@ -198,11 +198,28 @@ static int png_image_from_rawimg(struct png_image *dst,const struct rawimg *src)
         }
       } break;
   }
-  if (!dst->depth) return -1;
   
-  dst->v=src->v;
-  dst->stride=src->stride;
-  dst->pixelsize=src->pixelsize;
+  // If it didn't match, copy and force to RGBA.
+  if (!dst->depth) {
+    struct rawimg *tmp=rawimg_new_copy(src);
+    if (!tmp) return -1;
+    if (rawimg_force_rgba(tmp)<0) {
+      rawimg_del(tmp);
+      return -1;
+    }
+    dst->v=tmp->v;
+    tmp->v=0;
+    dst->stride=tmp->stride;
+    rawimg_del(tmp);
+    dst->depth=8;
+    dst->colortype=6;
+    dst->pixelsize=32;
+    
+  } else {
+    dst->v=src->v;
+    dst->stride=src->stride;
+    dst->pixelsize=src->pixelsize;
+  }
   dst->w=src->w;
   dst->h=src->h;
     
@@ -339,11 +356,20 @@ static struct rawimg *rawimg_decode_png(const uint8_t *src,int srcc) {
 #include "img/ico/ico.h"
 
 static int rawimg_encode_ico(struct sr_encoder *encoder,const struct rawimg *rawimg) {
-  if (rawimg->pixelsize!=32) return -1;
+  struct rawimg *killme=0;
+  if (!rawimg_is_rgba(rawimg)) {
+    if (!(killme=rawimg_new_copy(rawimg))) return -1;
+    if (rawimg_force_rgba(killme)<0) {
+      rawimg_del(killme);
+      return -1;
+    }
+    rawimg=killme;
+  }
   struct ico_file file={0};
   struct ico_image *image=ico_file_add_image(&file,rawimg->w,rawimg->h);
   if (!image) {
     ico_file_cleanup(&file);
+    rawimg_del(killme);
     return -1;
   }
   const uint8_t *srcrow=rawimg->v;
@@ -354,6 +380,7 @@ static int rawimg_encode_ico(struct sr_encoder *encoder,const struct rawimg *raw
   }
   int err=ico_encode(encoder,&file);
   ico_file_cleanup(&file);
+  rawimg_del(killme);
   return err;
 }
 
@@ -361,26 +388,31 @@ static struct rawimg *rawimg_decode_ico(const uint8_t *src,int srcc) {
   struct ico_file *file=ico_decode(src,srcc);
   if (!file) return 0;
   struct ico_image *image=ico_file_get_image(file,INT_MAX,INT_MAX,1);
-  //TODO ico images won't necessarily be 32 bits/pixel.
-  if (!image||(image->pixelsize!=32)) {
+  if (!image) {
     ico_file_del(file);
     return 0;
   }
-  struct rawimg *rawimg=rawimg_new_handoff(image->v,image->w,image->h,image->stride,32);
+  struct rawimg *rawimg=rawimg_new_handoff(image->v,image->w,image->h,image->stride,image->pixelsize);
   if (!rawimg) {
     ico_file_del(file);
     return 0;
   }
   image->v=0; // handed off
-  ico_file_del(file);
   
-  memcpy(rawimg->chorder,"RGBA",4);
-  uint8_t __attribute__((aligned(4))) layout[4]={0xff,0x00,0x00,0x00};
-  rawimg->rmask=*(uint32_t*)layout;
-  rawimg->gmask=(rawimg->rmask>>8)|(rawimg->rmask<<8); // one of those will be zero, get it?
-  rawimg->bmask=(rawimg->rmask>>16)|(rawimg->rmask<<16);
-  rawimg->amask=(rawimg->rmask>>24)|(rawimg->rmask<<24);
-        
+  //TODO !!! Need color table.
+  
+  if (image->pixelsize==32) {
+    memcpy(rawimg->chorder,"RGBA",4);
+    uint8_t __attribute__((aligned(4))) layout[4]={0xff,0x00,0x00,0x00};
+    rawimg->rmask=*(uint32_t*)layout;
+    rawimg->gmask=(rawimg->rmask>>8)|(rawimg->rmask<<8); // one of those will be zero, get it?
+    rawimg->bmask=(rawimg->rmask>>16)|(rawimg->rmask<<16);
+    rawimg->amask=(rawimg->rmask>>24)|(rawimg->rmask<<24);
+  } else {
+    // TODO Need ico to pass along more details from underlying PNG and BMP, so we can populate format.
+  }
+
+  ico_file_del(file);
   return rawimg;
 }
 
@@ -394,14 +426,27 @@ static struct rawimg *rawimg_decode_ico(const uint8_t *src,int srcc) {
 #include "img/qoi/qoi.h"
 
 static int rawimg_encode_qoi(struct sr_encoder *encoder,const struct rawimg *rawimg) {
-  if (rawimg->pixelsize!=32) return -1;
-  if (rawimg->stride!=rawimg->w<<2) return -1;
+  struct rawimg *killme=0;
+  if (!rawimg_is_rgba(rawimg)) {
+    if (!(killme=rawimg_new_copy(rawimg))) return -1;
+    if (rawimg_force_rgba(killme)<0) {
+      rawimg_del(killme);
+      return -1;
+    }
+    rawimg=killme;
+  }
+  if (rawimg->stride!=rawimg->w<<2) {
+    rawimg_del(killme);
+    return -1;
+  }
   struct qoi_image qoi={
     .v=rawimg->v,
     .w=rawimg->w,
     .h=rawimg->h,
   };
-  return qoi_encode(encoder,&qoi);
+  int err=qoi_encode(encoder,&qoi);
+  rawimg_del(killme);
+  return err;
 }
 
 static struct rawimg *rawimg_decode_qoi(const uint8_t *src,int srcc) {
@@ -436,8 +481,8 @@ static struct rawimg *rawimg_decode_qoi(const uint8_t *src,int srcc) {
 
 static int rawimg_encode_rlead(struct sr_encoder *encoder,const struct rawimg *rawimg) {
   struct rawimg *killme=0;
-  if (rawimg->pixelsize!=1) {
-    if (!(killme=rawimg_new_convert(rawimg,rawimg->pixelsize,0,0,rawimg->w,rawimg->h,0,0,0))) return -1;
+  if (rawimg_is_y1(rawimg)<2) {
+    if (!(killme=rawimg_new_copy(rawimg))) return -1;
     if (rawimg_force_y1(killme)<0) {
       rawimg_del(killme);
       return -1;
@@ -498,6 +543,43 @@ static struct rawimg *rawimg_decode_jpeg(const uint8_t *src,int srcc) {
 #include "img/bmp/bmp.h"
 
 static int rawimg_encode_bmp(struct sr_encoder *encoder,const struct rawimg *rawimg) {
+  struct rawimg *killme=0;
+  
+  // I think BMP does not support grayscale. Convert those to RGBA.
+  if ((rawimg->chorder[0]=='y')||(rawimg->chorder[0]=='Y')) {
+    if (!(killme=rawimg_new_copy(rawimg))||(rawimg_force_rgba(killme)<0)) {
+      rawimg_del(killme);
+      return -1;
+    }
+    rawimg=killme;
+    
+  // Pixel size must be in 1..32. Again, RGBA if not.
+  } else if (rawimg->pixelsize>32) {
+    if (!(killme=rawimg_new_copy(rawimg))||(rawimg_force_rgba(killme)<0)) {
+      rawimg_del(killme);
+      return -1;
+    }
+    rawimg=killme;
+    
+  // 24-bit pixels evidently need to be BGR, and masks are ignored.
+  } else if ((rawimg->pixelsize==24)&&((rawimg->chorder[0]=='R')||(rawimg->chorder[0]=='r'))) {
+    if (!(killme=rawimg_new_copy(rawimg))) return -1;
+    uint8_t *row=killme->v;
+    int yi=killme->h;
+    for (;yi-->0;row+=killme->stride) {
+      uint8_t *p=row;
+      int xi=killme->w;
+      for (;xi-->0;p+=3) {
+        uint8_t tmp=p[0];
+        p[0]=p[2];
+        p[2]=tmp;
+      }
+    }
+    rawimg=killme;
+    
+  // TODO Other conversions before BMP encode?
+  }
+  
   struct bmp_image bmp={
     .v=rawimg->v,
     .w=rawimg->w,
@@ -511,16 +593,14 @@ static int rawimg_encode_bmp(struct sr_encoder *encoder,const struct rawimg *raw
     .bmask=rawimg->bmask,
     .amask=rawimg->amask,
   };
-  return bmp_encode(encoder,&bmp,0);
+  int err=bmp_encode(encoder,&bmp,0);
+  rawimg_del(killme);
+  return err;
 }
 
 static struct rawimg *rawimg_decode_bmp(const uint8_t *src,int srcc) {
   struct bmp_image *bmp=bmp_decode(src,srcc);
   if (!bmp) return 0;
-  if (bmp_force_png_format(bmp)<0) {
-    bmp_image_del(bmp);
-    return 0;
-  }
   struct rawimg *rawimg=rawimg_new_handoff(bmp->v,bmp->w,bmp->h,bmp->stride,bmp->pixelsize);
   if (!rawimg) {
     bmp_image_del(bmp);
@@ -539,6 +619,9 @@ static struct rawimg *rawimg_decode_bmp(const uint8_t *src,int srcc) {
   rawimg->bmask=bmp->bmask;
   rawimg->amask=bmp->amask;
   rawimg->bitorder='>';
+  if (rawimg->pixelsize==24) {
+    memcpy(rawimg->chorder,"BGR\0",4);
+  }
   
   bmp_image_del(bmp);
   return rawimg;
@@ -554,14 +637,24 @@ static struct rawimg *rawimg_decode_bmp(const uint8_t *src,int srcc) {
 #include "img/gif/gif.h"
 
 static int rawimg_encode_gif(struct sr_encoder *encoder,const struct rawimg *rawimg) {
-  if (rawimg->pixelsize!=32) return -1;
+  struct rawimg *killme=0;
+  if (!rawimg_is_rgba(rawimg)) {
+    if (!(killme=rawimg_new_copy(rawimg))) return -1;
+    if (rawimg_force_rgba(killme)) {
+      rawimg_del(killme);
+      return -1;
+    }
+    rawimg=killme;
+  }
   struct gif_image gif={
     .v=rawimg->v,
     .w=rawimg->w,
     .h=rawimg->h,
     .stride=rawimg->stride,
   };
-  return gif_encode(encoder,&gif);
+  int err=gif_encode(encoder,&gif);
+  rawimg_del(killme);
+  return err;
 }
 
 static struct rawimg *rawimg_decode_gif(const uint8_t *src,int srcc) {

@@ -6,312 +6,503 @@
 #include <limits.h>
 #include <string.h>
 
-/* Decode a bunch of images, then reencode into every available format.
- * Successful reencode, redecode those and verify we get the exact same pixels back.
- * Record encoder performance for each file and format.
+/* Configuration.
+ */
+
+// basename of a file in our test set, or empty string to run all.
+#define RUN_SINGLE_FILE ""
+
+// Process only the first N files found, if >0.
+#define FILE_LIMIT 0
+
+// Replace with rawimg_canonicalize, rawimg_force_rgba, etc, if desired.
+#define precanon(rawimg) 0
+
+// Nonzero to write every converted file under mid/test/int/img/testfiles.
+// Beware this can be a huge number of files.
+#define SAVE_ALL_OUTPUTS 0
+
+// Nonzero to print a side-by-side, some small portion of each image that failed matching after re-decode.
+#define PRINT_MISMATCH_COMPARISONS 0
+
+// Dump all outcomes, and encoded sizes where successful.
+#define PRINT_BIG_REPORT 0
+
+// Instead of encoded sizes, print ratio to original input file size.
+#define PRINT_RELATIVE_SIZES 0
+
+/* Global context.
  */
  
-struct decode_images_context {
+struct di {
   const char **fmtv;
   int fmtc,fmta;
   char **pathv;
   int pathc,patha;
-  struct decode_images_result {
-    int serialc; // 0 if encode failed
-    int match;
+  
+  /* Sorted by (path,fmt), which must match our (pathv,fmtv),
+   * except results may omit an entire (pathv) row.
+   * ie it's naturally in the correct order for tabular output.
+   */
+  struct di_result {
+    const char *path;
+    const char *fmt;
+    int original_serialc; // From the test file (same for all of a given path).
+    int serialc; // Encoded length, or <0 if encode failed.
+    int match; // (0,1,2,3)=( Didn't try decode, decode failed, mismatch, success )
   } *resultv;
-  // Length of (resultv) is (fmtc*pathc). (fmtv,pathv) are final before we start doing things.
+  int resultc,resulta;
 };
 
-static void decode_images_context_cleanup(struct decode_images_context *ctx) {
-  if (ctx->fmtv) free(ctx->fmtv);
-  if (ctx->pathv) {
-    while (ctx->pathc-->0) free(ctx->pathv[ctx->pathc]);
-    free(ctx->pathv);
+static void di_cleanup(struct di *di) {
+  if (di->fmtv) free(di->fmtv);
+  if (di->pathv) {
+    while (di->pathc-->0) free(di->pathv[di->pathc]);
+    free(di->pathv);
   }
-  if (ctx->resultv) {
-    free(ctx->resultv);
+  if (di->resultv) free(di->resultv);
+  memset(di,0,sizeof(struct di));
+}
+
+/* Some interesting events where we might want to dump output.
+ * These are not for normal reporting, and should be empty unless you're tracking down some specific bug.
+ */
+
+static void di_evt_decode_failed(
+  struct di *di,
+  const char *path,
+  const void *serial,int serialc
+) {
+}
+
+static void di_evt_decoded(
+  struct di *di,
+  const char *path,
+  const void *serial,int serialc,
+  const struct rawimg *rawimg
+) {
+}
+
+static void di_evt_encode_failed(
+  struct di *di,
+  const char *path,
+  const char *fmt,
+  const struct rawimg *rawimg
+) {
+}
+ 
+static void di_evt_encoded(
+  struct di *di,
+  const char *path,
+  const char *fmt,
+  const void *serial,int serialc
+) {
+  if (SAVE_ALL_OUTPUTS) {
+    if (memcmp(path,"src/",4)) return;
+    int fmtc=0;
+    while (fmt[fmtc]) fmtc++;
+    int pathc=0;
+    while (path[pathc]) pathc++;
+    char dstpath[1024];
+    if (pathc+1+fmtc>=sizeof(dstpath)) return;
+    memcpy(dstpath,path,pathc);
+    memcpy(dstpath,"mid/",4);
+    dstpath[pathc]='.';
+    memcpy(dstpath+pathc+1,fmt,fmtc+1);
+    if (dir_mkdirp_parent(dstpath)<0) return;
+    if (file_write(dstpath,serial,serialc)<0) return;
+    fprintf(stderr,"%s: Wrote file, %d bytes.\n",dstpath,serialc);
   }
 }
 
-static int decode_images_add_fmt(struct decode_images_context *ctx,const char *fmt) {
-  if (ctx->fmtc>=ctx->fmta) {
-    int na=ctx->fmta+8;
-    if (na>INT_MAX/sizeof(void*)) return -1;
-    void *nv=realloc(ctx->fmtv,sizeof(void*)*na);
-    if (!nv) return -1;
-    ctx->fmtv=nv;
-    ctx->fmta=na;
-  }
-  ctx->fmtv[ctx->fmtc++]=fmt;
-  return 0;
+static void di_evt_redecode_failed(
+  struct di *di,
+  const char *path,
+  const char *fmt,
+  const void *serial,int serialc
+) {
 }
 
-static int decode_images_cb_path(const char *path,const char *base,char type,void *userdata) {
-  struct decode_images_context *ctx=userdata;
-
-  //XXX artificially limit while working
-  //if (ctx->pathc>=4) return 1;
-  //if (strcmp(base,"oi9n2c16.png")) return 0;
-
-  if (ctx->pathc>=ctx->patha) {
-    int na=ctx->patha+16;
-    if (na>INT_MAX/sizeof(void*)) return -1;
-    void *nv=realloc(ctx->pathv,sizeof(void*)*na);
-    if (!nv) return -1;
-    ctx->pathv=nv;
-    ctx->patha=na;
-  }
-  if (!(ctx->pathv[ctx->pathc]=strdup(path))) return -1;
-  ctx->pathc++;
-  return 0;
-}
-
-static int images_match(const struct rawimg *a,const struct rawimg *b) {
-  if (a==b) return 1;
-  if (!a||!b) return 0;
-  if (a->w!=b->w) return 0;
-  if (a->h!=b->h) return 0;
-  if (a->pixelsize!=b->pixelsize) return 0;
-  int cmpc=(a->stride<b->stride)?a->stride:b->stride;
-  const uint8_t *arow=a->v,*brow=b->v;
-  int yi=a->h;
-  for (;yi-->0;arow+=a->stride,brow+=b->stride) {
-    if (memcmp(arow,brow,cmpc)) return 0;
-  }
-  return 1;
-}
-
-static inline uint8_t extract_with_mask(uint32_t src,uint32_t mask) {
-  if (!mask) return 0;
-  while (!(mask&1)) { src>>=1; mask>>=1; }
-  while (mask>0xff) { src>>=1; mask>>=1; }
-  // if mask<0xff, shift left and copy. i don't think that comes up in our test
-  return src;
-}
-
-static int cvt_to_rgba(int src,void *userdata) {
-  struct rawimg *rawimg=userdata;
-  if ((src>=0)&&(src<rawimg->ctabc)) {
-    const uint8_t *p=rawimg->ctab+src*4;
-    return p[0]|(p[1]<<8)|(p[2]<<16)|(p[3]<<24);
-  }
-  if (rawimg->rmask) {
-    // This is wildly inefficient...
-    uint8_t r=extract_with_mask(src,rawimg->rmask);
-    uint8_t g=extract_with_mask(src,rawimg->gmask);
-    uint8_t b=extract_with_mask(src,rawimg->bmask);
-    uint8_t a=extract_with_mask(src,rawimg->amask);
-    return r|(g<<8)|(b<<16)|(a<<24);
-  }
-  if (!memcmp(rawimg->chorder,"RGB\0",4)) {
-    return src|0xff000000;
-  }
-  return src;
-}
-
-static int cvt_to_y1(int src,void *userdata) {
-  struct rawimg *rawimg=userdata;
-  return src;//TODO
-}
-
-static void dump_mismatched_images(const char *path,const char *fmt,const struct rawimg *a,const struct rawimg *b) {
-  if (!a||!b) return;
-  if ((a->w!=b->w)||(a->h!=b->h)||(a->pixelsize!=b->pixelsize)) {
-    fprintf(stderr,
-      "%s as %s: Geometry mismatch (%d,%d,%d)=>(%d,%d,%d)\n",
-      path,fmt,a->w,a->h,a->pixelsize,b->w,b->h,b->pixelsize
-    );
-    return;
-  }
-  fprintf(stderr,"=== %s as %s, mismatch ===\n",path,fmt);
-  int wlimit=30; // max byte per row. for each image. so output width is like (wlimit*6)
-  int cpc=(a->stride<b->stride)?a->stride:b->stride;
-  if (cpc>wlimit) cpc=wlimit;
-  const uint8_t *arow=a->v,*brow=b->v;
-  int y=0;
-  for (;y<a->h;y++,arow+=a->stride,brow+=b->stride) {
-    char tmp[1024];
-    int tmpc,i;
-    tmpc=snprintf(tmp,sizeof(tmp),"  [%3d]",y);
-    for (i=0;i<cpc;i++) {
-      if (arow[i]==brow[i]) {
-        tmpc+=snprintf(tmp+tmpc,sizeof(tmp)-tmpc," %02x",arow[i]);
-      } else {
-        tmpc+=snprintf(tmp+tmpc,sizeof(tmp)-tmpc," \x1b[31m%02x\x1b[0m",arow[i]);
+static void di_evt_mismatch(
+  struct di *di,
+  const char *path,
+  const char *fmt,
+  const struct rawimg *before,
+  const struct rawimg *after
+) {
+  if (PRINT_MISMATCH_COMPARISONS) {
+    const int wlimit=6; // 18 columns per pixel, plus some overhead, there's not much room.
+    const int hlimit=40; // No particular reason for a limit on height.
+    fprintf(stderr,"=== Mismatch %s:%s ===\n",path,fmt);
+    int cmpw=(before->w<after->w)?before->w:after->w;
+    int cmph=(before->h<after->h)?before->h:after->h;
+    if (cmpw>wlimit) cmpw=wlimit;
+    if (cmph>hlimit) cmph=hlimit;
+    struct rawimg_iterator aiter,biter;
+    if (rawimg_iterate(&aiter,before,0,0,cmpw,cmph,0)<0) return;
+    if (rawimg_iterate(&biter,after,0,0,cmpw,cmph,0)<0) return;
+    int yi=cmph; while (yi-->0) {
+      int xi;
+      for (xi=cmpw;xi-->0;) {
+        int pixel=rawimg_iterator_read(&aiter);
+        //pixel=(pixel|(pixel>>8)|(pixel>>16)|(pixel>>24))&0xff;
+        fprintf(stderr," %08x",pixel);
+        if (!rawimg_iterator_next(&aiter)) break;
       }
-    }
-    tmpc+=snprintf(tmp+tmpc,sizeof(tmp)-tmpc," |");
-    for (i=0;i<cpc;i++) {
-      if (arow[i]==brow[i]) {
-        tmpc+=snprintf(tmp+tmpc,sizeof(tmp)-tmpc," %02x",brow[i]);
-      } else {
-        tmpc+=snprintf(tmp+tmpc,sizeof(tmp)-tmpc," \x1b[31m%02x\x1b[0m",brow[i]);
+      fprintf(stderr," |");
+      for (xi=cmpw;xi-->0;) {
+        int pixel=rawimg_iterator_read(&biter);
+        //pixel=(pixel|(pixel>>8)|(pixel>>16)|(pixel>>24))&0xff;
+        fprintf(stderr," %08x",pixel);
+        if (!rawimg_iterator_next(&biter)) break;
       }
+      fprintf(stderr,"\n");
     }
-    fprintf(stderr,"%.*s\n",tmpc,tmp);
+    fprintf(stderr,"=== End of mismatch dump ===\n");
   }
 }
 
-// The main test body. Run for one file and format, dump results in the provided vector.
-static int decode_images_1(
-  struct decode_images_result *result,
-  struct decode_images_context *ctx,
-  struct rawimg *rawimg,
-  const void *serial0,int serial0c,
+/* Compare two images, should be identical.
+ * Nonzero if identical.
+ */
+ 
+static int di_compare_images(
+  const struct rawimg *a,
+  const struct rawimg *b,
   const char *path,
   const char *fmt
 ) {
-
-  /* You'll see that rlead and gif fail at the compare, for most images.
-   * That's because they're comparing RGBA to their own y1 or i8, it's just not possible to match.
-   * We could lend them a hand and convert to something amenable first, but that gets messy.
-   */
   
+  // First a couple easy answers...
+  if (a==b) return 1;
+  if (!a||!b) return 0;
+  if ((a->w!=b->w)||(a->h!=b->h)) return 0;
+  
+  /* If (pixelsize,chorder,bitorder,rmask) match, compare by memcmp, easy.
+   * But not if color tables are in play, then all bets are off.
+   */
+  if (
+    (a->pixelsize==b->pixelsize)&&
+    !memcmp(a->chorder,b->chorder,4)&&
+    (a->bitorder==b->bitorder)&&
+    (a->rmask==b->rmask)&&
+    !a->ctabc&&!b->ctabc
+  ) {
+    if (a->stride==b->stride) {
+      return memcmp(a->v,b->v,a->stride*a->h)?0:1;
+    }
+    const uint8_t *arow=a->v;
+    const uint8_t *brow=b->v;
+    int cmpc=(a->stride<b->stride)?a->stride:b->stride;
+    int yi=a->h;
+    for (;yi-->0;arow+=a->stride,brow+=b->stride) {
+      if (memcmp(arow,brow,cmpc)) return 0;
+    }
+    return 1;
+  }
+  
+  /* OK now the tricky compare.
+   * Lots of conversions will involve some destructive down-sampling.
+   * So we need rules loose enough to accomodate that:
+   *  - Iterate both images and record what pixel was produced for each source pixel.
+   *  - If a given source value produces multiple outputs, mismatch.
+   *  - If source has at least 2 distinct colors, dest must have at least 2 too.
+   * That last point won't always work. A dark input converting to y1 might go all black.
+   * We'll trust that test images contain sufficient contrast.
+   * I do want to assert that the output isn't blank, that seems important.
+   * (a) is INPUT, (b) is OUTPUT.
+   */
+  struct cvtpx { int a,b; } *cvtpxv=0;
+  int cvtpxc=0,cvtpxa=0;
+  struct rawimg_iterator aiter,biter;
+  if (rawimg_iterate(&aiter,a,0,0,a->w,a->h,0)<0) return 0;
+  if (rawimg_iterate(&biter,b,0,0,b->w,b->h,0)<0) return 0;
+  do {
+    int apx=rawimg_iterator_read(&aiter);
+    int bpx=rawimg_iterator_read(&biter);
+    
+    int lo=0,hi=cvtpxc,p=-1;
+    while (lo<hi) {
+      int ck=(lo+hi)>>1;
+      const struct cvtpx *cvtpx=cvtpxv+ck;
+           if (apx<cvtpx->a) hi=ck;
+      else if (apx>cvtpx->a) lo=ck+1;
+      else { p=ck; break; }
+    }
+    if (p<0) {
+      p=lo;
+      if (cvtpxc>=cvtpxa) {
+        int na=cvtpxa+256;
+        if (na>INT_MAX/sizeof(struct cvtpx)) {
+          if (cvtpxv) free(cvtpxv);
+          return 0;
+        }
+        void *nv=realloc(cvtpxv,sizeof(struct cvtpx)*na);
+        if (!nv) {
+          if (cvtpxv) free(cvtpxv);
+          return 0;
+        }
+        cvtpxv=nv;
+        cvtpxa=na;
+      }
+      struct cvtpx *cvtpx=cvtpxv+p;
+      memmove(cvtpx+1,cvtpx,sizeof(struct cvtpx)*(cvtpxc-p));
+      cvtpxc++;
+      cvtpx->a=apx;
+      cvtpx->b=bpx;
+    } else {
+      if (cvtpxv[p].b!=bpx) {
+        fprintf(stderr,"%s:%s: pixel %08x became both %08x and %08x p=%d/%d [%08x]\n",path,fmt,apx,cvtpxv[p].b,bpx,p,cvtpxc,cvtpxv[p].a);
+        free(cvtpxv);
+        return 0;
+      }
+    }
+    
+  } while (rawimg_iterator_next(&aiter)&&rawimg_iterator_next(&biter));
+   
+  if (cvtpxv) free(cvtpxv);
+  return 1;
+}
+
+/* Test one decoded image against one format.
+ */
+ 
+static int di_test_one_format(
+  struct di *di,
+  const char *path,
+  const char *fmt,
+  const void *original_serial,int original_serialc, // for reference, probly not useful
+  struct rawimg *rawimg
+) {
+  if (di->resultc>=di->resulta) {
+    int na=di->resulta+256;
+    if (na>INT_MAX/sizeof(struct di_result)) return -1;
+    void *nv=realloc(di->resultv,sizeof(struct di_result)*na);
+    if (!nv) return -1;
+    di->resultv=nv;
+    di->resulta=na;
+  }
+  struct di_result *result=di->resultv+di->resultc++;
+  memset(result,0,sizeof(struct di_result));
+  result->path=path;
+  result->fmt=fmt;
+  result->original_serialc=original_serialc;
+  
+  const char *original_fmt=rawimg->encfmt;
   rawimg->encfmt=fmt;
   struct sr_encoder serial={0};
-  if (rawimg_encode(&serial,rawimg)<0) {
-    fprintf(stderr,"%s: Failed to encode as %s. size=%d,%d pixelsize=%d\n",path,fmt,rawimg->w,rawimg->h,rawimg->pixelsize);
+  int err=rawimg_encode(&serial,rawimg);
+  rawimg->encfmt=original_fmt;
+  if (err<0) {
+    di_evt_encode_failed(di,path,fmt,rawimg);
     sr_encoder_cleanup(&serial);
-    // Report will be "xxx".
+    result->serialc=-1;
     return 0;
   }
-  // Report will be "!NNN" (mismatch) or "NNN" (match).
   result->serialc=serial.c;
   
-  // hexdump all encoded images
-  if (0&&!strcmp(fmt,"rawimg")) {
-    fprintf(stderr,"=== %s as %s (%d,%d) ===\n",path,fmt,rawimg->w,rawimg->h);
-    int p=0;
-    for (;p<serial.c;p+=16) {
-      char tmp[128];
-      int tmpc=snprintf(tmp,sizeof(tmp),"%08x |",p);
-      int i=0; for (;i<16;i++) {
-        if (p+i>=serial.c) break;
-        tmp[tmpc++]=' ';
-        tmp[tmpc++]="0123456789abcdef"[((uint8_t*)serial.v)[p+i]>>4];
-        tmp[tmpc++]="0123456789abcdef"[((uint8_t*)serial.v)[p+i]&15];
-      }
-      fprintf(stderr,"%.*s\n",tmpc,tmp);
-    }
-    fprintf(stderr,"%08x\n",serial.c);
-  }
+  di_evt_encoded(di,path,fmt,serial.v,serial.c);
   
-  // selectively dump encoded image for manual review
-  if (0&&!strcmp(path,"src/test/int/img/testfiles/oi9n2c16.png")&&!strcmp(fmt,"bmp")) {
-    const char *dstpath="mid/oi9n2c16.bmp";
-    if (file_write(dstpath,serial.v,serial.c)>=0) {
-      fprintf(stderr,"%s: Wrote %d bytes reencoded from %s\n",dstpath,serial.c,path);
-    }
-  }
-  
+  result->match=1; // decode attempted
   struct rawimg *redecode=rawimg_decode(serial.v,serial.c);
-  result->match=images_match(rawimg,redecode);
-  
-  if (0&&!result->match) dump_mismatched_images(path,fmt,rawimg,redecode);
-
-  rawimg_del(redecode);
+  if (!redecode) {
+    di_evt_redecode_failed(di,path,fmt,serial.v,serial.c);
+    sr_encoder_cleanup(&serial);
+    return 0;
+  }
   sr_encoder_cleanup(&serial);
+  result->match=2; // decode succeeded
+  
+  if (di_compare_images(rawimg,redecode,path,fmt)) {
+    result->match=3; // perfect!
+  } else {
+    di_evt_mismatch(di,path,fmt,rawimg,redecode);
+  }
+  
+  rawimg_del(redecode);
   return 0;
 }
 
-static void decode_images_report_results(struct decode_images_context *ctx) {
-  int colw=8; // Long enough for the longest encoding name and cell content, and a space.
-  int hdrcolw=10; // Long enough for the longest test file basename minus suffix; we will truncate if longer.
-  int rowbufc=hdrcolw+colw*ctx->fmtc;
-  char *rowbuf=malloc(rowbufc);
-  if (!rowbuf) return;
+/* Process files. The main event.
+ */
+ 
+static int di_process_file(struct di *di,const char *path) {
+  void *serial=0;
+  int serialc=file_read(&serial,path);
+  ASSERT_CALL(serialc,"path=%s",path)
   
-  { // Header row.
-    memset(rowbuf,' ',rowbufc);
-    char *dst=rowbuf+hdrcolw;
-    int fmtp=0; for (;fmtp<ctx->fmtc;fmtp++,dst+=colw) {
-      const char *name=ctx->fmtv[fmtp];
-      int namec=0; while (name[namec]) namec++;
-      if (namec>colw) namec=colw;
-      memcpy(dst+colw-namec,name,namec);
+  struct rawimg *rawimg=rawimg_decode(serial,serialc);
+  if (rawimg) {
+    di_evt_decoded(di,path,serial,serialc,rawimg);
+  } else {
+    di_evt_decode_failed(di,path,serial,serialc);
+    free(serial);
+    return -1;
+  }
+  ASSERT_CALL(precanon(rawimg),"path=%s",path)
+
+  int fmti=0;
+  for (;fmti<di->fmtc;fmti++) {
+    int err=di_test_one_format(di,path,di->fmtv[fmti],serial,serialc,rawimg);
+    if (err<0) {
+      free(serial);
+      rawimg_del(rawimg);
+      return err;
     }
-    fprintf(stderr,"%.*s\n",rowbufc,rowbuf);
   }
   
-  const struct decode_images_result *result=ctx->resultv;
-  int pathp=0; for (;pathp<ctx->pathc;pathp++) {
-    memset(rowbuf,' ',rowbufc);
-    
-    const char *path=ctx->pathv[pathp];
-    int pathc=0; while (path[pathc]) pathc++;
-    int sepp=path_split(path,pathc);
-    const char *base=path+sepp+1;
-    int basec=pathc-sepp-1;
-    int i=0; for (;i<basec;i++) if (base[i]=='.') basec=i;
-    if (basec>hdrcolw) basec=hdrcolw;
-    memcpy(rowbuf,base,basec);
-    
-    char *dst=rowbuf+hdrcolw;
-    int fmtp=0; for (;fmtp<ctx->fmtc;fmtp++,result++,dst+=colw) {
-      char tmp[32];
-      int tmpc=0;
-      
-      if (result->serialc<1) { // Failed to encode.
-        memcpy(tmp,"xxxxxxx",7);
-        tmpc=7;
-      } else if (!result->match) { // Encoded but failed to decode or mismatch after decode.
-        tmpc=snprintf(tmp,sizeof(tmp),"!%d",result->serialc);
-      } else { // Everything worked. Report the encoded length.
-        tmpc=sr_decsint_repr(tmp,sizeof(tmp),result->serialc);
-      }
-      
-      if (tmpc>colw) tmpc=colw;
-      memcpy(dst+colw-tmpc,tmp,tmpc);
-    }
-    fprintf(stderr,"%.*s\n",rowbufc,rowbuf);
-  }
-  
-  free(rowbuf);
+  rawimg_del(rawimg);
+  free(serial);
+  return 0;
 }
  
-ITEST(decode_images) {
-  struct decode_images_context ctx={0};
-  
-  for (;;) {
-    const char *fmt=rawimg_supported_format_by_index(ctx.fmtc);
-    if (!fmt) break;
-    if (decode_images_add_fmt(&ctx,fmt)<0) FAIL()
-  }
-  ASSERT_INTS_OP(ctx.fmtc,>,0)
-  
-  ASSERT_CALL(dir_read("src/test/int/img/testfiles",decode_images_cb_path,&ctx))
-  ASSERT_INTS_OP(ctx.pathc,>,0)
-  
-  int resultc=ctx.fmtc*ctx.pathc;
-  if (!(ctx.resultv=calloc(resultc,sizeof(struct decode_images_result)))) FAIL()
-  
-  struct decode_images_result *result=ctx.resultv;
-  int pathp=0; for (;pathp<ctx.pathc;pathp++) {
-    const char *path=ctx.pathv[pathp];
-    //fprintf(stderr,"%s:%d: Processing %s...\n",__FILE__,__LINE__,path);
-    void *serial0=0;
-    int serial0c=file_read(&serial0,path);
-    ASSERT_INTS_OP(serial0c,>,0,"path=%s",path)
-    struct rawimg *rawimg=rawimg_decode(serial0,serial0c);
-    if (rawimg) {
-      //rawimg_canonicalize(rawimg);
-      rawimg_force_rgba(rawimg);
-      int fmtp=0; for (;fmtp<ctx.fmtc;fmtp++,result++) {
-        const char *fmt=ctx.fmtv[fmtp];
-        ASSERT_CALL(decode_images_1(result,&ctx,rawimg,serial0,serial0c,path,fmt),"path=%s fmt=%s",path,fmt)
-      }
-    } else {
-      // Failed to decode initially, skip everything. They'll have (serialc,match)==0 by default.
-      result+=ctx.fmtc;
+static int di_process_files(struct di *di) {
+  int i=0,err;
+  for (;i<di->pathc;i++) {
+    if ((err=di_process_file(di,di->pathv[i]))<0) {
+      fprintf(stderr,"%s: Error processing file.\n",di->pathv[i]);
+      return err;
     }
-    rawimg_del(rawimg);
-    free(serial0);
   }
-  
-  // Enable this line for a huge report.
-  decode_images_report_results(&ctx);
-
-  decode_images_context_cleanup(&ctx);
   return 0;
+}
+
+/* Report results.
+ */
+ 
+static int di_report_results(struct di *di) {
+  const int filecolw=20,resultcolw=10;
+  int i;
+  char buf[1024];
+  int bufc=0;
+  
+  fprintf(stderr,"=== decode_images results ===\n");
+  bufc=0;
+  memset(buf+bufc,' ',filecolw);
+  bufc+=filecolw;
+  for (i=0;i<di->fmtc;i++) bufc+=snprintf(buf+bufc,sizeof(buf)-bufc,"%*s",resultcolw,di->fmtv[i]);
+  fprintf(stderr,"%.*s\n",bufc,buf);
+  bufc=0;
+  
+  const char *curpath=0;
+  const struct di_result *result=di->resultv;
+  for (i=di->resultc;i-->0;result++) {
+    const char *base=result->path;
+    int pathi=0; for (;result->path[pathi];pathi++) if (result->path[pathi]=='/') base=result->path+pathi+1;
+    if (curpath!=result->path) {
+      if (bufc) fprintf(stderr,"%.*s\n",bufc,buf);
+      bufc=snprintf(buf,sizeof(buf),"%*s",filecolw,base);
+      curpath=result->path;
+    }
+  
+    if (result->serialc<0) {
+      bufc+=snprintf(buf+bufc,sizeof(buf)-bufc,"%*s",resultcolw,"xxxxxxxx");
+    } else if (result->match>=3) {
+      if (PRINT_RELATIVE_SIZES) {
+        bufc+=snprintf(buf+bufc,sizeof(buf)-bufc,"%*.3f",resultcolw,(double)result->serialc/(double)result->original_serialc);
+      } else {
+        bufc+=snprintf(buf+bufc,sizeof(buf)-bufc,"%*d",resultcolw,result->serialc);
+      }
+    } else if (result->match==2) {
+      bufc+=snprintf(buf+bufc,sizeof(buf)-bufc,"%*s",resultcolw,"mismatch");
+    } else {
+      bufc+=snprintf(buf+bufc,sizeof(buf)-bufc,"%*s",resultcolw,"error");
+    }
+    
+  }
+  if (bufc) fprintf(stderr,"%.*s\n",bufc,buf);
+  
+  fprintf(stderr,"=== end of decode_images report ===\n");
+  return 0;
+}
+
+/* Review results and fail if any individual failed.
+ * Report has already been printed by this point so it's ok to fail hard.
+ */
+ 
+static int di_assert_results(struct di *di) {
+  const struct di_result *result=di->resultv;
+  int i=di->resultc;
+  for (;i-->0;result++) {
+    switch (result->match) {
+      case 0: FAIL("%s => %s, failed to encode",result->path,result->fmt) break;
+      case 1: FAIL("%s => %s, failed to re-decode",result->path,result->fmt) break;
+      case 2: FAIL("%s => %s, mismatch after re-decode",result->path,result->fmt) break;
+    }
+  }
+  return 0;
+}
+
+/* Discover and add test file paths.
+ */
+ 
+static int di_cb_testfiles_bottom(const char *path,const char *base,char type,void *userdata) {
+  struct di *di=userdata;
+  if (base[0]=='.') return 0;
+  if (!type) type=file_get_type(path);
+  if (type!='f') return 0;
+  
+  if (RUN_SINGLE_FILE[0]&&strcmp(base,RUN_SINGLE_FILE)) return 0;
+  if ((FILE_LIMIT>0)&&(di->pathc>=FILE_LIMIT)) return 0;
+  
+  if (di->pathc>=di->patha) {
+    int na=di->patha+256;
+    if (na>INT_MAX/sizeof(void*)) return -1;
+    void *nv=realloc(di->pathv,sizeof(void*)*na);
+    if (!nv) return -1;
+    di->pathv=nv;
+    di->patha=na;
+  }
+  if (!(di->pathv[di->pathc]=strdup(path))) return -1;
+  di->pathc++;
+  return 0;
+}
+ 
+static int di_cb_testfiles_top(const char *path,const char *base,char type,void *userdata) {
+  struct di *di=userdata;
+  if (!type) type=file_get_type(path);
+  if (type!='d') return 0;
+  
+  // Opportunity to filter top-level directories.
+  
+  return dir_read(path,di_cb_testfiles_bottom,di);
+}
+
+/* Gather requirements.
+ */
+ 
+static int di_gather_requirements(struct di *di) {
+  int p=0,err;
+  for (;;p++) {
+    const char *fmt=rawimg_supported_format_by_index(p);
+    if (!fmt||!fmt[0]) break;
+    if (di->fmtc>=di->fmta) {
+      int na=di->fmta+16;
+      if (na>INT_MAX/sizeof(void*)) return -1;
+      void *nv=realloc(di->fmtv,sizeof(void*)*na);
+      if (!nv) return -1;
+      di->fmtv=nv;
+      di->fmta=na;
+    }
+    di->fmtv[di->fmtc++]=fmt;
+  }
+  if ((err=dir_read("src/test/int/img/testfiles",di_cb_testfiles_top,di))<0) return err;
+  return 0;
+}
+
+/* Main entry point.
+ */
+ 
+ITEST(decode_images) {
+  struct di di={0};
+  int result=0;
+  if ((result=di_gather_requirements(&di))<0) goto _done_;
+  if ((result=di_process_files(&di))<0) goto _done_;
+  if (PRINT_BIG_REPORT) {
+    if ((result=di_report_results(&di))<0) goto _done_;
+  }
+  result=di_assert_results(&di);
+ _done_:;
+  di_cleanup(&di);
+  return result;
 }

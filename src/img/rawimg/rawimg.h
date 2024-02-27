@@ -83,6 +83,7 @@ void rawimg_del(struct rawimg *rawimg);
 struct rawimg *rawimg_new_alloc(int w,int h,int pixelsize);
 struct rawimg *rawimg_new_handoff(void *v,int w,int h,int stride,int pixelsize);
 struct rawimg *rawimg_new_borrow(void *v,int w,int h,int stride,int pixelsize);
+struct rawimg *rawimg_new_copy(const struct rawimg *src); // Minimizes stride, otherwise identical to (src).
 
 /* Reformat, crop, apply axiswise transform.
  * Can crop but can't extend -- bounds must be valid for (src).
@@ -106,6 +107,13 @@ int rawimg_canonicalize(struct rawimg *rawimg);
 int rawimg_force_rgba(struct rawimg *rawimg);
 int rawimg_force_y8(struct rawimg *rawimg);
 int rawimg_force_y1(struct rawimg *rawimg);
+
+/* Test for canonical formats. (0,1,2)=( No, Ambiguous, Yes ).
+ * "Ambiguous" means the size is correct but format isn't fully specified.
+ */
+int rawimg_is_rgba(const struct rawimg *rawimg);
+int rawimg_is_y8(const struct rawimg *rawimg);
+int rawimg_is_y1(const struct rawimg *rawimg);
 
 int rawimg_set_ctab(struct rawimg *rawimg,const void *rgba,int colorc);
 int rawimg_require_ctab(struct rawimg *rawimg,int colorc);
@@ -142,8 +150,9 @@ const char *rawimg_supported_format_by_index(int p);
 
 struct rawimg_iterator_1 {
   void *p;
-  uint8_t mask;
-  int d; // in bits if (mask), else in bytes
+  int d;
+  int pbit;
+  int dpbit;
   int c; // in pixels
 };
 
@@ -152,9 +161,10 @@ struct rawimg_iterator {
   struct rawimg_iterator_1 major;
   int minorc;
   int pixelsize;
-  char bitorder;
-  int (*read)(const void *p,uint8_t mask);
-  void (*write)(void *p,uint8_t mask,int pixel);
+  void *pixels;
+  int sizebit; // +(1,2,4) if big-endian, -(1,2,4) if little-endian
+  int (*read)(const struct rawimg_iterator *iter);
+  void (*write)(struct rawimg_iterator *iter,int pixel);
 };
 
 /* (x,y,w,h) must be within (image) bounds.
@@ -178,13 +188,8 @@ int rawimg_iterate(
 static inline int rawimg_iterator_next(struct rawimg_iterator *iter) {
   if (iter->minor.c) {
     iter->minor.c--;
-    if (iter->minor.mask) {
-      iter->minor.p=(char*)iter->minor.p+(iter->minor.d>>3);
-      if (iter->bitorder=='<') {
-        iter->minor.mask=(iter->minor.mask<<(iter->minor.d&7))|(iter->minor.mask>>(8-(iter->minor.d&7)));
-      } else {
-        iter->minor.mask=(iter->minor.mask>>(iter->minor.d&7))|(iter->minor.mask<<(8-(iter->minor.d&7)));
-      }
+    if (iter->minor.dpbit) {
+      iter->minor.pbit+=iter->minor.dpbit;
     } else {
       iter->minor.p=(char*)iter->minor.p+iter->minor.d;
     }
@@ -192,17 +197,13 @@ static inline int rawimg_iterator_next(struct rawimg_iterator *iter) {
   }
   if (iter->major.c) {
     iter->major.c--;
-    if (iter->major.mask) {
-      iter->major.p=(char*)iter->major.p+(iter->major.d>>3);
-      if (iter->bitorder=='<') {
-        iter->major.mask=(iter->major.mask<<(iter->major.d&7))|(iter->major.mask>>(8-(iter->major.d&7)));
-      } else {
-        iter->major.mask=(iter->major.mask>>(iter->major.d&7))|(iter->major.mask<<(8-(iter->major.d&7)));
-      }
+    if (iter->major.dpbit) {
+      iter->major.pbit+=iter->major.dpbit;
+      iter->minor.pbit=iter->major.pbit;
     } else {
       iter->major.p=(char*)iter->major.p+iter->major.d;
+      iter->minor.p=iter->major.p;
     }
-    iter->minor.p=iter->major.p;
     iter->minor.c=iter->minorc;
     return 1;
   }
@@ -210,13 +211,11 @@ static inline int rawimg_iterator_next(struct rawimg_iterator *iter) {
 }
 
 static inline int rawimg_iterator_read(struct rawimg_iterator *iter) {
-  if (iter->minor.mask) return iter->read(iter->minor.p,iter->minor.mask);
-  return iter->read(iter->minor.p,iter->pixelsize);
+  return iter->read(iter);
 }
 
 static inline void rawimg_iterator_write(struct rawimg_iterator *iter,int pixel) {
-  if (iter->minor.mask) iter->write(iter->minor.p,iter->minor.mask,pixel);
-  else iter->write(iter->minor.p,iter->pixelsize,pixel);
+  iter->write(iter,pixel);
 }
 
 /* Odds, ends.

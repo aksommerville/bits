@@ -16,6 +16,7 @@ struct png_encoder {
   uint8_t *rowbuf;
   int rowbufc; // including filter byte, ie 1+stride
   int xstride; // bytes column to column for filter purposes (min 1)
+  int stride; // May be less than input.
   z_stream *z; // Initialized if not null.
 };
 
@@ -249,7 +250,7 @@ static int png_encode_IDAT(struct png_encoder *ctx) {
   int lenp=ctx->dst->c;
   if (sr_encode_raw(ctx->dst,"\0\0\0\0IDAT",8)<0) return -1;
   
-  ctx->rowbufc=1+ctx->image->stride;
+  ctx->rowbufc=1+ctx->stride;
   if (!(ctx->rowbuf=malloc(ctx->rowbufc))) return -1;
   ctx->xstride=(ctx->image->pixelsize+7)>>3;
   
@@ -264,7 +265,7 @@ static int png_encode_IDAT(struct png_encoder *ctx) {
   const uint8_t *srcrow=ctx->image->v;
   int y=0;
   for (;y<ctx->image->h;y++,srcrow+=ctx->image->stride) {
-    ctx->rowbuf[0]=png_filter_row(ctx->rowbuf+1,srcrow,pvrow,ctx->image->stride,ctx->xstride);
+    ctx->rowbuf[0]=png_filter_row(ctx->rowbuf+1,srcrow,pvrow,ctx->stride,ctx->xstride);
     if (png_encode_row(ctx)<0) return -1;
     pvrow=srcrow;
   }
@@ -285,6 +286,10 @@ static int png_encode_IDAT(struct png_encoder *ctx) {
  */
  
 static int png_encode_inner(struct png_encoder *ctx) {
+
+  if ((ctx->stride=png_minimum_stride(ctx->image->w,ctx->image->pixelsize))<1) return -1;
+  if (ctx->stride>ctx->image->stride) return -1;
+
   if (sr_encode_raw(ctx->dst,"\x89PNG\r\n\x1a\n",8)<0) return -1;
   if (png_encode_IHDR(ctx)<0) return -1;
   if (png_encode_chunks(ctx)<0) return -1;
