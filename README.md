@@ -40,7 +40,7 @@ Things we can copy, try to keep them self-contained.
 - - [ ] mswm
 - - [ ] msaudio
 - - [ ] mshid
-- [ ] Host IO abstraction
+- [x] Host IO abstraction
 - [ ] wasm-micro-runtime client
 - [ ] quickjs client
 - [ ] libjpeg client

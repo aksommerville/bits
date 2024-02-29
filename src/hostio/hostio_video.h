@@ -9,13 +9,6 @@ struct hostio_video_type;
 struct hostio_video_delegate;
 struct hostio_video_setup;
 
-struct hostio_video {
-  const struct hostio_video_type *type;
-  struct hostio_video_delegate delegate;
-  int w,h,fullscreen;
-  int cursor_visible;
-};
-
 struct hostio_video_delegate {
   void *userdata;
   void (*cb_close)(struct hostio_video *driver);
@@ -26,6 +19,13 @@ struct hostio_video_delegate {
   void (*cb_mmotion)(struct hostio_video *driver,int x,int y);
   void (*cb_mbutton)(struct hostio_video *driver,int btnid,int value);
   void (*cb_mwheel)(struct hostio_video *driver,int dx,int dy);
+};
+
+struct hostio_video {
+  const struct hostio_video_type *type;
+  struct hostio_video_delegate delegate;
+  int w,h,fullscreen;
+  int cursor_visible;
 };
 
 struct hostio_video_setup {
@@ -53,6 +53,14 @@ struct hostio_video_type {
   int (*begin)(struct hostio_video *driver);
   int (*end)(struct hostio_video *driver);
 };
+
+void hostio_video_del(struct hostio_video *driver);
+
+struct hostio_video *hostio_video_new(
+  const struct hostio_video_type *type,
+  const struct hostio_video_delegate *delegate,
+  const struct hostio_video_setup *setup
+);
 
 const struct hostio_video_type *hostio_video_type_by_index(int p);
 const struct hostio_video_type *hostio_video_type_by_name(const char *name,int namec);

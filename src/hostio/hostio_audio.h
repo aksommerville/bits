@@ -11,16 +11,16 @@ struct hostio_audio_type;
 struct hostio_audio_delegate;
 struct hostio_audio_setup;
 
+struct hostio_audio_delegate {
+  void *userdata;
+  void (*cb_pcm_out)(int16_t *v,int c,struct hostio_audio *driver);
+};
+
 struct hostio_audio {
   const struct hostio_audio_type *type;
   struct hostio_audio_delegate delegate;
   int rate,chanc;
   int playing;
-};
-
-struct hostio_audio_delegate {
-  void *userdata;
-  void (*cb_pcm_out)(int16_t *v,int c,struct hostio_audio *driver);
 };
 
 struct hostio_audio_setup {
@@ -37,11 +37,19 @@ struct hostio_audio_type {
   int appointment_only;
   void (*del)(struct hostio_audio *driver);
   int (*init)(struct hostio_audio *driver,const struct hostio_audio_setup *setup);
+  void (*play)(struct hostio_audio *driver,int play);
   int (*update)(struct hostio_audio *driver);
   int (*lock)(struct hostio_audio *driver);
   void (*unlock)(struct hostio_audio *driver);
-  void (*play)(struct hostio_audio *driver,int play);
 };
+
+void hostio_audio_del(struct hostio_audio *driver);
+
+struct hostio_audio *hostio_audio_new(
+  const struct hostio_audio_type *type,
+  const struct hostio_audio_delegate *delegate,
+  const struct hostio_audio_setup *setup
+);
 
 const struct hostio_audio_type *hostio_audio_type_by_index(int p);
 const struct hostio_audio_type *hostio_audio_type_by_name(const char *name,int namec);

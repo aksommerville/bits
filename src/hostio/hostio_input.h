@@ -1,24 +1,24 @@
 /* hostio_input.h
  */
  
-#ifndef HOSTIO_AUDIO_H
-#define HOSTIO_AUDIO_H
+#ifndef HOSTIO_INPUT_H
+#define HOSTIO_INPUT_H
 
 struct hostio_input;
 struct hostio_input_type;
 struct hostio_input_delegate;
 struct hostio_input_setup;
 
-struct hostio_input {
-  const struct hostio_input_type *type;
-  struct hostio_input_delegate delegate;
-};
-
 struct hostio_input_delegate {
   void *userdata;
   void (*cb_connect)(struct hostio_input *driver,int devid);
   void (*cb_disconnect)(struct hostio_input *driver,int devid);
   void (*cb_button)(struct hostio_input *driver,int devid,int btnid,int value);
+};
+
+struct hostio_input {
+  const struct hostio_input_type *type;
+  struct hostio_input_delegate delegate;
 };
 
 struct hostio_input_setup {
@@ -34,6 +34,14 @@ struct hostio_input_type {
   int (*init)(struct hostio_input *driver,const struct hostio_input_setup *setup);
   int (*update)(struct hostio_input *driver);
 };
+
+void hostio_input_del(struct hostio_input *driver);
+
+struct hostio_input *hostio_input_new(
+  const struct hostio_input_type *type,
+  const struct hostio_input_delegate *delegate,
+  const struct hostio_input_setup *setup
+);
 
 const struct hostio_input_type *hostio_input_type_by_index(int p);
 const struct hostio_input_type *hostio_input_type_by_name(const char *name,int namec);
