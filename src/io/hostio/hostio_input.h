@@ -22,7 +22,7 @@ struct hostio_input {
 };
 
 struct hostio_input_setup {
-  int dummy;
+  const char *path;
 };
 
 struct hostio_input_type {
@@ -32,7 +32,22 @@ struct hostio_input_type {
   int appointment_only;
   void (*del)(struct hostio_input *driver);
   int (*init)(struct hostio_input *driver,const struct hostio_input_setup *setup);
+  
+  /* Driver should only fire callbacks during update.
+   * Don't call cb_connect during init, wait for the first update.
+   * Don't call cb_disconnect during del or on manual disconnects.
+   */
   int (*update)(struct hostio_input *driver);
+  
+  int (*devid_by_index)(const struct hostio_input *driver,int p);
+  void (*disconnect)(struct hostio_input *driver,int devid);
+  const char *(*get_ids)(int *vid,int *pid,int *version,struct hostio_input *driver,int devid);
+  int (*for_each_button)(
+    struct hostio_input *driver,
+    int devid,
+    int (*cb)(int btnid,int hidusage,int lo,int hi,int value,void *userdata),
+    void *userdata
+  );
 };
 
 void hostio_input_del(struct hostio_input *driver);

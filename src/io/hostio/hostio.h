@@ -62,9 +62,19 @@ int hostio_init_input(
   const struct hostio_input_setup *setup
 );
 
+/* A pretty common thing to want, and annoying to repeat, but nothing you couldn't do on your own.
+ * Print a line to stderr for each active driver.
+ */
+void hostio_log_driver_names(const struct hostio *hostio);
+
 /* Updates all drivers. May block.
  * This pumps the video driver if necessary, but does not touch its actual video ops. Just its event queue.
  */
 int hostio_update(struct hostio *hostio);
+
+/* Conveniences.
+ */
+int hostio_toggle_fullscreen(struct hostio *hostio); // => (0,1)=(window,fullscreen) new state.
+int hostio_audio_play(struct hostio *hostio,int play); // => (0,1) new state
 
 #endif

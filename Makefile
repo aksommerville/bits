@@ -15,11 +15,13 @@ OBJC:=$(CC) -xobjective-c
 AS:=$(CC) -xassembler-with-cpp
 CXX:=g++ -c -MMD -O3 -Isrc -Imid -Werror -Wimplicit
 LD:=gcc
-LDPOST:=-lm -lz
+LDPOST:=-lm -lz -lX11 -lpulse-simple
 
 # Declare all the "optional" units as in-use.
 USE_ALL_OPT:=$(patsubst %,-DUSE_%=1, \
-  midi serial fs hostio http gif bmp rawimg qoi rlead ico png wamr qjs \
+  midi serial fs http wamr qjs \
+  hostio evdev glx drmgx x11fb drmfb alsafd asound pulse \
+  rawimg gif bmp qoi rlead ico png \
 )
 CC+=$(USE_ALL_OPT)
 
@@ -63,5 +65,5 @@ $(EXE_ITEST):$(OFILES_ITEST);$(PRECMD) $(LD_ITEST) -o$@ $^ $(LDPOST_ITEST)
 mid/test/int/itest_toc.h:$(CFILES_ITEST);$(PRECMD) etc/tool/gen-itest-toc.sh $@ $^
 
 #TODO Automation, Javascript.
-test:$(EXES_UTEST) $(EXE_ITEST);etc/tool/run-tests.sh $^
-test-%:$(EXES_UTEST) $(EXE_ITEST);TEST_FILTER="$*" etc/tool/run-tests.sh $^
+test:$(EXES_UTEST) $(EXE_ITEST);trap '' INT ; etc/tool/run-tests.sh $^
+test-%:$(EXES_UTEST) $(EXE_ITEST);trap '' INT ; TEST_FILTER="$*" etc/tool/run-tests.sh $^

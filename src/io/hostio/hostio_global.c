@@ -200,6 +200,23 @@ int hostio_init_input(
   return 0;
 }
 
+/* Log driver selections.
+ */
+ 
+void hostio_log_driver_names(const struct hostio *hostio) {
+  if (!hostio) return;
+  if (hostio->video) {
+    fprintf(stderr,"Using video driver '%s' size=%d,%d\n",hostio->video->type->name,hostio->video->w,hostio->video->h);
+  }
+  if (hostio->audio) {
+    fprintf(stderr,"Using audio driver '%s' %d@%d\n",hostio->audio->type->name,hostio->audio->chanc,hostio->audio->rate);
+  }
+  int i=0; for (;i<hostio->inputc;i++) {
+    struct hostio_input *driver=hostio->inputv[i];
+    fprintf(stderr,"Using input driver '%s'\n",driver->type->name);
+  }
+}
+
 /* Update.
  */
  
@@ -218,4 +235,23 @@ int hostio_update(struct hostio *hostio) {
     }
   }
   return 0;
+}
+
+/* Conveniences.
+ */
+ 
+int hostio_toggle_fullscreen(struct hostio *hostio) {
+  if (!hostio||!hostio->video) return 0;
+  if (hostio->video->type->set_fullscreen) {
+    hostio->video->type->set_fullscreen(hostio->video,hostio->video->fullscreen?0:1);
+  }
+  return hostio->video->fullscreen;
+}
+
+int hostio_audio_play(struct hostio *hostio,int play) {
+  if (!hostio||!hostio->audio) return 0;
+  if (hostio->audio->type->play) {
+    hostio->audio->type->play(hostio->audio,play);
+  }
+  return hostio->audio->playing;
 }

@@ -1,4 +1,21 @@
 #include "hostio_internal.h"
+#include <limits.h>
+
+//XXX stubs for ones i haven't written yet
+#define STUB(t,n) const struct hostio_##t##_type hostio_##t##_type_##n={.name=#n,.objlen=sizeof(struct hostio_##t),.appointment_only=1};
+STUB(video,glx)
+STUB(video,drmgx)
+STUB(video,bcm)
+STUB(video,drmfb)
+STUB(video,macwm)
+STUB(video,mswm)
+STUB(audio,alsafd)
+STUB(audio,asound)
+STUB(audio,macaudio)
+STUB(audio,msaudio)
+STUB(input,machid)
+STUB(input,mshid)
+#undef STUB
 
 /* Registry of types.
  */
@@ -7,6 +24,8 @@ extern const struct hostio_video_type hostio_video_type_dummy;
 extern const struct hostio_video_type hostio_video_type_glx;
 extern const struct hostio_video_type hostio_video_type_drmgx;
 extern const struct hostio_video_type hostio_video_type_bcm;
+extern const struct hostio_video_type hostio_video_type_x11fb;
+extern const struct hostio_video_type hostio_video_type_drmfb;
 extern const struct hostio_video_type hostio_video_type_macwm;
 extern const struct hostio_video_type hostio_video_type_mswm;
 
@@ -30,6 +49,12 @@ static const struct hostio_video_type *hostio_video_typev[]={
 #endif
 #if USE_bcm
   &hostio_video_type_bcm,
+#endif
+#if USE_x11fb
+  &hostio_video_type_x11fb,
+#endif
+#if USE_drmfb
+  &hostio_video_type_drmfb,
 #endif
 #if USE_macwm
   &hostio_video_type_macwm,
@@ -120,3 +145,13 @@ DRIVERTYPE(audio)
 DRIVERTYPE(input)
 
 #undef DRIVERTYPE
+
+/* Extra device ID registry for input.
+ */
+ 
+static int hostio_devid=1;
+ 
+int hostio_input_devid_next() {
+  if (hostio_devid>=INT_MAX) return 0;
+  return hostio_devid++;
+}

@@ -5,7 +5,10 @@
 #ifndef TEST_H
 #define TEST_H
 
+// This header only needs stdio.h, but I figure we always want stdlib and string too...
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 /* Table of contents declarations.
  *************************************************************************/

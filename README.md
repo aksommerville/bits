@@ -23,15 +23,15 @@ Things we can copy, try to keep them self-contained.
 - [x] midi: File reader, stream reader, and constants
 - [ ] wav
 - [ ] Drivers with private interfaces
-- - [ ] evdev
-- - [ ] x11fb
+- - [x] evdev
+- - [x] x11fb
 - - [ ] glx
 - - [ ] drmfb
 - - [ ] drmgx
 - - [ ] bcm
 - - [ ] alsafd
-- - [ ] alsaas
-- - [ ] pulse
+- - [ ] asound
+- - [x] pulse
 - - [ ] ossmidi
 - - [ ] macioc
 - - [ ] macwm
