@@ -25,12 +25,12 @@ Things we can copy, try to keep them self-contained.
 - [ ] Drivers with private interfaces
 - - [x] evdev
 - - [x] x11fb
-- - [ ] glx
+- - [x] glx
 - - [ ] drmfb
 - - [ ] drmgx
 - - [ ] bcm
-- - [ ] alsafd
-- - [ ] asound
+- - [x] alsafd
+- - [x] asound
 - - [x] pulse
 - - [ ] ossmidi
 - - [ ] macioc

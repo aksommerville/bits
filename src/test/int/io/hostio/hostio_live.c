@@ -22,8 +22,12 @@
 
 // Frequency in Hertz, level in 0..32767.
 // Set either to zero to disable. Which you'll probably want, it's kind of obnoxious.
-#define TONE_FREQ 0 /*300*/
+#define TONE_FREQ 300
 #define AUDIO_LEVEL 5000
+
+// If the driver supports framebuffers we use it.
+// But for those that don't, we do a cheap OpenGL cudgel right here too. Optionally.
+#define ENABLE_OPENGL 1
  
 /* Globals.
  */
@@ -172,6 +176,75 @@ static void cb_pcm_out(int16_t *v,int c,struct hostio_audio *driver) {
   }
 }
 
+/* OpenGL 1.x cudgel to provide a fake framebuffer.
+ */
+#if ENABLE_OPENGL
+
+#include <GL/gl.h>
+
+static GLuint texid=0;
+
+#define GLFB_W 256
+#define GLFB_H 192
+static uint8_t glfb[GLFB_W*GLFB_H*4];
+ 
+static int opengl_init() {
+  glGenTextures(1,&texid);
+  ASSERT(texid,"glGenTextures")
+  glBindTexture(GL_TEXTURE_2D,texid);
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+  
+  fbdesc.w=GLFB_W;
+  fbdesc.h=GLFB_H;
+  fbdesc.stride=GLFB_W<<2;
+  fbdesc.pixelsize=32;
+  memcpy(fbdesc.chorder,"rgbx",4);
+  uint32_t bodetect=0x04030201;
+  if (*(uint8_t*)&bodetect==0x04) {
+    fbdesc.rmask=0xff000000;
+    fbdesc.gmask=0x00ff0000;
+    fbdesc.bmask=0x0000ff00;
+    fbdesc.amask=0x000000ff;
+  } else {
+    fbdesc.rmask=0x000000ff;
+    fbdesc.gmask=0x0000ff00;
+    fbdesc.bmask=0x00ff0000;
+    fbdesc.amask=0xff000000;
+  }
+  return 0;
+}
+
+static void opengl_commit(struct hostio_video *video) {
+  glViewport(0,0,video->w,video->h);
+  glClearColor(0.0f,0.0f,0.0f,1.0f);
+  glClear(GL_COLOR_BUFFER_BIT);
+  glBindTexture(GL_TEXTURE_2D,texid);
+  glTexImage2D(GL_TEXTURE_2D,0,GL_RGB,GLFB_W,GLFB_H,0,GL_RGBA,GL_UNSIGNED_BYTE,glfb);
+  glEnable(GL_TEXTURE_2D);
+  glDisable(GL_BLEND);
+  int dstw=(video->h*fbdesc.w)/fbdesc.h,dsth;
+  if (dstw<=video->w) { // pillarbox
+    dsth=video->h;
+  } else { // letterbox
+    dstw=video->w;
+    dsth=(video->w*fbdesc.h)/fbdesc.w;
+  }
+  GLfloat normw=(GLfloat)dstw/(GLfloat)video->w;
+  GLfloat normh=(GLfloat)dsth/(GLfloat)video->h;
+  glBegin(GL_TRIANGLE_STRIP);
+    glColor4ub(0xff,0xff,0xff,0xff);
+    glTexCoord2i(0,0); glVertex2f(-normw, normh);
+    glTexCoord2i(0,1); glVertex2f(-normw,-normh);
+    glTexCoord2i(1,0); glVertex2f( normw, normh);
+    glTexCoord2i(1,1); glVertex2f( normw,-normh);
+  glEnd();
+}
+
+#endif
+
 /* Generate a frame of video.
  */
  
@@ -218,7 +291,15 @@ static int render_scene(struct hostio_video *video) {
   ASSERT_INTS(fbdesc.h,192)
   ASSERT_INTS(fbdesc.pixelsize,32)
   ASSERT_NOT(fbdesc.stride&3)
-  uint32_t *fb=video->type->fb_begin(video);
+  uint32_t *fb=0;
+  #if ENABLE_OPENGL
+    if (texid) {
+      ASSERT_CALL(video->type->gx_begin(video))
+      fb=(uint32_t*)glfb;
+    } else fb=video->type->fb_begin(video);
+  #else
+    fb=video->type->fb_begin(video);
+  #endif
   ASSERT(fb)
   
   // Fill with dark gray. Not black; we want to see where the framebuffer ends and platform's margin begins.
@@ -244,8 +325,18 @@ static int render_scene(struct hostio_video *video) {
     blit(fb,spritex,spritey,spritebits);
   }
   
-  video->type->fb_end(video);
+  #if ENABLE_OPENGL
+    if (texid) {
+      opengl_commit(video);
+      ASSERT_CALL(video->type->gx_end(video))
+    } else {
+      ASSERT_CALL(video->type->fb_end(video))
+    }
+  #else
+    ASSERT_CALL(video->type->fb_end(video))
+  #endif
   vframec++;
+  return 0;
 }
 
 /* Having decoded our sprite image, force it to conform to the framebuffer format, or drop it.
@@ -350,10 +441,29 @@ XXX_ITEST(hostio_live) {
       .device=0,
     };
     ASSERT_CALL(hostio_init_video(hostio,HOSTIO_LIVE_VIDEO_DRIVERS,&setup))
-    ASSERT(hostio->video->type->fb_describe)
-    ASSERT_CALL(hostio->video->type->fb_describe(&fbdesc,hostio->video))
+    const char *fbsrc="Video driver declares";
+    #if ENABLE_OPENGL
+      if (hostio->video->type->fb_describe&&(hostio->video->type->fb_describe(&fbdesc,hostio->video)>=0)) {
+        // OpenGL is enabled but we're using the driver's framebuffer anyway.
+        ASSERT(hostio->video->type->fb_begin)
+        ASSERT(hostio->video->type->fb_end)
+      } else {
+        // No native framebuffer from driver. Fake it with OpenGL.
+        ASSERT_CALL(opengl_init())
+        fbsrc="Using OpenGL to fake";
+        ASSERT(hostio->video->type->gx_begin)
+        ASSERT(hostio->video->type->gx_end)
+      }
+    #else
+      // Driver must supply a framebuffer.
+      ASSERT(hostio->video->type->fb_describe)
+      ASSERT_CALL(hostio->video->type->fb_describe(&fbdesc,hostio->video))
+      ASSERT(hostio->video->type->fb_begin)
+      ASSERT(hostio->video->type->fb_end)
+    #endif
     fprintf(stderr,
-      "Video driver declares framebuffer: (%d,%d)@%d stride=%d masks=%08x,%08x,%08x,%08x order=%.4s\n",
+      "%s framebuffer: (%d,%d)@%d stride=%d masks=%08x,%08x,%08x,%08x order=%.4s\n",
+      fbsrc,
       fbdesc.w,fbdesc.h,fbdesc.pixelsize,fbdesc.stride,
       fbdesc.rmask,fbdesc.gmask,fbdesc.bmask,fbdesc.amask,
       fbdesc.chorder
