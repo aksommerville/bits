@@ -77,4 +77,7 @@ void x11fb_show_cursor(struct x11fb *x11fb,int show);
 void x11fb_set_fullscreen(struct x11fb *x11fb,int fullscreen);
 void x11fb_suppress_screensaver(struct x11fb *x11fb);
 
+void x11fb_get_size(int *w,int *h,const struct x11fb *x11fb);
+int x11fb_get_fullscreen(const struct x11fb *x11fb);
+
 #endif

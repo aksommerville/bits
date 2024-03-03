@@ -62,4 +62,7 @@ void glx_show_cursor(struct glx *glx,int show);
 void glx_set_fullscreen(struct glx *glx,int fullscreen);
 void glx_suppress_screensaver(struct glx *glx);
 
+void glx_get_size(int *w,int *h,const struct glx *glx);
+int glx_get_fullscreen(const struct glx *glx);
+
 #endif

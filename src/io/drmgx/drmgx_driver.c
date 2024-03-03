@@ -180,3 +180,11 @@ int drmgx_swap() {
 
   return 0;
 }
+
+/* Trivial accessors.
+ */
+ 
+void drmgx_get_size(int *w,int *h) {
+  *w=drmgx.w;
+  *h=drmgx.h;
+}

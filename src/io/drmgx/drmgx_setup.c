@@ -124,11 +124,13 @@ static int drmgx_select_best_mode(drmModeResPtr res) {
   }
   if (!bestconn) return -1;
   
+  /**
   fprintf(stderr,
     "drm: Selected video mode '%.*s' (%dx%d@%dHz)\n",
     DRM_DISPLAY_MODE_LEN,bestmode.name,
     bestmode.hdisplay,bestmode.vdisplay,bestmode.vrefresh
   );
+  /**/
   drmgx.mmw=bestconn->mmWidth;
   drmgx.mmh=bestconn->mmHeight;
   drmgx.connid=bestconn->connector_id;

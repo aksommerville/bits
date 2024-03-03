@@ -410,3 +410,15 @@ void x11fb_suppress_screensaver(struct x11fb *x11fb) {
   x11fb->screensaver_suppressed=1;
   XForceScreenSaver(x11fb->dpy,ScreenSaverReset);
 }
+
+/* Trivial accessors.
+ */
+ 
+void x11fb_get_size(int *w,int *h,const struct x11fb *x11fb) {
+  *w=x11fb->w;
+  *h=x11fb->h;
+}
+
+int x11fb_get_fullscreen(const struct x11fb *x11fb) {
+  return x11fb->fullscreen;
+}

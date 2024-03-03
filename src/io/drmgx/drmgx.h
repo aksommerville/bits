@@ -14,4 +14,6 @@ void drmgx_quit();
 int drmgx_init(const char *path);
 int drmgx_swap();
 
+void drmgx_get_size(int *w,int *h);
+
 #endif

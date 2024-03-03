@@ -54,10 +54,12 @@ const struct drmfb_mode *drmfb_get_mode(const struct drmfb *drmfb);
 
 int drmfb_get_fd(const struct drmfb *drmfb);
 
-// See DRM_FORMAT_* in libdrm/drm_mode.h
+// See DRM_FORMAT_* in libdrm/drm_fourcc.h
 uint32_t drmfb_get_pixel_format(const struct drmfb *drmfb);
 
-/* Begin blocks until vsync.
+/* In the past, this would block until vsync at end.
+ * But trying on 2024-03-03, after some time away, there is no blocking.
+ * Not sure what's correct here.
  */
 void *drmfb_begin(struct drmfb *drmfb);
 int drmfb_end(struct drmfb *drmfb);

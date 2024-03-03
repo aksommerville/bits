@@ -344,3 +344,15 @@ void glx_suppress_screensaver(struct glx *glx) {
   glx->screensaver_suppressed=1;
   XForceScreenSaver(glx->dpy,ScreenSaverReset);
 }
+
+/* Trivial accessors.
+ */
+ 
+void glx_get_size(int *w,int *h,const struct glx *glx) {
+  *w=glx->w;
+  *h=glx->h;
+}
+
+int glx_get_fullscreen(const struct glx *glx) {
+  return glx->fullscreen;
+}

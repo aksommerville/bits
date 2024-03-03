@@ -59,14 +59,12 @@ uint32_t drmfb_get_pixel_format(const struct drmfb *drmfb) {
 }
 
 /* Begin rendering.
- * TODO This feels wrong: The buffer we provide at begin is not the one we flip to at end.
- * Doing it this way, I get milky smooth animation, so I'm keeping it.
  */
 
 void *drmfb_begin(struct drmfb *drmfb) {
   if (drmfb->fd<0) return 0;
-  struct drmfb_fb *fb=drmfb->fbv+drmfb->fbp;
   drmfb->fbp^=1;
+  struct drmfb_fb *fb=drmfb->fbv+drmfb->fbp;
   void *buffer=fb->v;
   return buffer;
 }

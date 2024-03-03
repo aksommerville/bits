@@ -24,6 +24,12 @@
 #define HOSTIO_LIVE_WINDOW_W 0
 #define HOSTIO_LIVE_WINDOW_H 0
 
+/* I didn't implement a backup frame clock, so you have to set this if the video driver doesn't block on vsync.
+ * (drivers typically do that, but they're not required to).
+ * 16666, if you see the demo running too fast.
+ */
+#define HOSTIO_LIVE_FRAME_SLEEP_US 16666
+
 // Frequency in Hertz, level in 0..32767.
 // Set either to zero to disable. Which you'll probably want, it's kind of obnoxious.
 #define TONE_FREQ 300
@@ -269,8 +275,8 @@ static void fill_rect(uint32_t *fb,int x,int y,int w,int h,int pixel) {
 
 static void blit(uint32_t *fb,int dstx,int dsty,const struct rawimg *src) {
   int srcx=0,srcy=0,w=src->w,h=src->h;
-  if (dstx<0) { srcx-=dstx; w+=dstx; }
-  if (dsty<0) { srcy-=dsty; h+=dsty; }
+  if (dstx<0) { srcx-=dstx; w+=dstx; dstx=0; }
+  if (dsty<0) { srcy-=dsty; h+=dsty; dsty=0; }
   if (dstx>fbdesc.w-w) w=fbdesc.w-dstx;
   if (dsty>fbdesc.h-h) h=fbdesc.h-dsty;
   if ((w<1)||(h<1)) return;
@@ -514,7 +520,9 @@ XXX_ITEST(hostio_live) {
   while (!sigc&&!closed_window) {
     ASSERT_CALL(hostio_update(hostio))
     ASSERT_CALL(render_scene(hostio->video))
-    //usleep(16666);
+    // Video drivers are not required to enforce timing (though glx, drmfb, and drmgx all do).
+    // In real life you should always have a backup frame clock.
+    usleep(HOSTIO_LIVE_FRAME_SLEEP_US);
   }
   
   hostio_del(hostio);
