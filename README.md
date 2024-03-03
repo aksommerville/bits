@@ -26,8 +26,8 @@ Things we can copy, try to keep them self-contained.
 - - [x] evdev
 - - [x] x11fb
 - - [x] glx
-- - [ ] drmfb
-- - [ ] drmgx
+- - [x] drmfb
+- - [x] drmgx
 - - [ ] bcm
 - - [x] alsafd
 - - [x] asound

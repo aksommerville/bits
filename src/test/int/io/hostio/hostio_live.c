@@ -20,10 +20,14 @@
 #define HOSTIO_LIVE_AUDIO_DRIVERS 0
 #define HOSTIO_LIVE_INPUT_DRIVERS 0
 
+// Window or screen size at init. Recommend 0,0 to let the driver decide.
+#define HOSTIO_LIVE_WINDOW_W 0
+#define HOSTIO_LIVE_WINDOW_H 0
+
 // Frequency in Hertz, level in 0..32767.
 // Set either to zero to disable. Which you'll probably want, it's kind of obnoxious.
 #define TONE_FREQ 300
-#define AUDIO_LEVEL 5000
+#define AUDIO_LEVEL 0
 
 // If the driver supports framebuffers we use it.
 // But for those that don't, we do a cheap OpenGL cudgel right here too. Optionally.
@@ -287,8 +291,8 @@ static void blit(uint32_t *fb,int dstx,int dsty,const struct rawimg *src) {
 }
  
 static int render_scene(struct hostio_video *video) {
-  ASSERT_INTS(fbdesc.w,256)
-  ASSERT_INTS(fbdesc.h,192)
+  ASSERT_INTS_OP(fbdesc.w,>=,256)
+  ASSERT_INTS_OP(fbdesc.h,>=,192)
   ASSERT_INTS(fbdesc.pixelsize,32)
   ASSERT_NOT(fbdesc.stride&3)
   uint32_t *fb=0;
@@ -303,16 +307,16 @@ static int render_scene(struct hostio_video *video) {
   ASSERT(fb)
   
   // Fill with dark gray. Not black; we want to see where the framebuffer ends and platform's margin begins.
-  fill_rect(fb,0,0,fbdesc.w,fbdesc.h,0x40404040);
+  fill_rect(fb,0,0,fbdesc.w,fbdesc.h,0x40404040|fbdesc.amask);
   
   /* Draw three squares, from left to right: Red, Green, Blue.
    * Notable here is we're using grays and primaries, so we don't need any complicated pixel format adjustment.
    */
   int spritew=50;
   int halfw=spritew>>1;
-  fill_rect(fb,(1*fbdesc.w)/4-halfw,(fbdesc.h>>1)-halfw,spritew,spritew,fbdesc.rmask);
-  fill_rect(fb,(2*fbdesc.w)/4-halfw,(fbdesc.h>>1)-halfw,spritew,spritew,fbdesc.gmask);
-  fill_rect(fb,(3*fbdesc.w)/4-halfw,(fbdesc.h>>1)-halfw,spritew,spritew,fbdesc.bmask);
+  fill_rect(fb,(1*fbdesc.w)/4-halfw,(fbdesc.h>>1)-halfw,spritew,spritew,fbdesc.rmask|fbdesc.amask);
+  fill_rect(fb,(2*fbdesc.w)/4-halfw,(fbdesc.h>>1)-halfw,spritew,spritew,fbdesc.gmask|fbdesc.amask);
+  fill_rect(fb,(3*fbdesc.w)/4-halfw,(fbdesc.h>>1)-halfw,spritew,spritew,fbdesc.bmask|fbdesc.amask);
   
   /* Draw a sprite, if we got it.
    * Also update it here. Bad practice, but hey we're not a game-architecture demo.
@@ -433,8 +437,8 @@ XXX_ITEST(hostio_live) {
       .iconrgba=0,
       .iconw=0,
       .iconh=0,
-      .w=0,
-      .h=0,
+      .w=HOSTIO_LIVE_WINDOW_W,
+      .h=HOSTIO_LIVE_WINDOW_H,
       .fullscreen=0,
       .fbw=256,
       .fbh=192,
@@ -510,7 +514,7 @@ XXX_ITEST(hostio_live) {
   while (!sigc&&!closed_window) {
     ASSERT_CALL(hostio_update(hostio))
     ASSERT_CALL(render_scene(hostio->video))
-    usleep(16666);
+    //usleep(16666);
   }
   
   hostio_del(hostio);

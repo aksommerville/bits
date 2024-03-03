@@ -3,9 +3,7 @@
 
 //XXX stubs for ones i haven't written yet
 #define STUB(t,n) const struct hostio_##t##_type hostio_##t##_type_##n={.name=#n,.objlen=sizeof(struct hostio_##t),.appointment_only=1};
-STUB(video,drmgx)
 STUB(video,bcm)
-STUB(video,drmfb)
 STUB(video,macwm)
 STUB(video,mswm)
 STUB(audio,macaudio)

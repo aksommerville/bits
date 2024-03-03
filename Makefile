@@ -10,12 +10,12 @@ CFILES_ALL:=$(filter-out src/test/%,$(filter %.c %.m %.s %.cxx,$(SRCFILES)))
 
 clean:;rm -rf mid out
 
-CC:=gcc -c -MMD -O3 -Isrc -Imid -Werror -Wimplicit
+CC:=gcc -c -MMD -O3 -Isrc -Imid -Werror -Wimplicit -I/usr/include/libdrm
 OBJC:=$(CC) -xobjective-c
 AS:=$(CC) -xassembler-with-cpp
 CXX:=g++ -c -MMD -O3 -Isrc -Imid -Werror -Wimplicit
 LD:=gcc
-LDPOST:=-lm -lz -lX11 -lXinerama -lpulse-simple -lGL -lpthread -lasound
+LDPOST:=-lm -lz -lX11 -lXinerama -lpulse-simple -lGL -lpthread -lasound -ldrm -lgbm -lEGL
 
 # Declare all the "optional" units as in-use.
 USE_ALL_OPT:=$(patsubst %,-DUSE_%=1, \
