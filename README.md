@@ -41,8 +41,8 @@ Things we can copy, try to keep them self-contained.
 - - [ ] msaudio
 - - [ ] mshid
 - [x] Host IO abstraction
-- [ ] wasm-micro-runtime client
-- [ ] quickjs client
+- [x] wasm-micro-runtime client
+- [x] quickjs client
 - [ ] libjpeg client
 - [ ] HTTP server and client
 - [ ] WebSocket
