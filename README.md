@@ -44,6 +44,6 @@ Things we can copy, try to keep them self-contained.
 - [x] wasm-micro-runtime client
 - [x] quickjs client
 - [ ] libjpeg client
-- [ ] HTTP server and client
+- [x] HTTP server and client
 - [ ] WebSocket
 - [x] Filesystem conveniences
