@@ -1,5 +1,5 @@
 #include "test/test.h"
-#include "io/simplifio/simplifio.h"
+#include "opt/simplifio/simplifio.h"
 #include <unistd.h>
 #include <signal.h>
 #include <math.h>
@@ -37,8 +37,7 @@ static void rcvsig(int sigid) {
 }
 
 /* Audio callback.
- * I'll try to do better than hostio's audio here...
- * When you press the space bar, or we get any '1' value from general input, play a brief pleasant tone.
+ * When you press 's', or we get any '1' value from general input, play a brief pleasant tone.
  */
  
 static double synth_level=0.0; // with prequantization, ie 0..32767
@@ -113,7 +112,7 @@ static void cb_text(void *userdata,int codepoint) {
   fprintf(stderr,"%s U+%x\n",__func__,codepoint);
   switch (codepoint) {
     case 0x1b: window_closed=1; break; // ESC == close window
-    case ' ': synth_play_note(); break;
+    case 's': synth_play_note(); break;
     case 'f': simplifio_video_set_fullscreen(simplifio_video_get_fullscreen()?0:1); break;
   }
 }

@@ -8,7 +8,7 @@ fi
 DSTPATH="$1"
 shift 1
 
-TMPPATH=mid/test/int/tmptoc
+TMPPATH=mid/tests/test/int/tmptoc
 rm -f $TMPPATH
 touch $TMPPATH
 

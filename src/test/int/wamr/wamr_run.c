@@ -1,6 +1,6 @@
 #include "test/test.h"
-#include "wamr/wamr.h"
-#include "fs/fs.h"
+#include "opt/wamr/wamr.h"
+#include "opt/fs/fs.h"
 #include "wasm_export.h"
 
 /* Some functions to expose to our Wasm executables.
@@ -18,7 +18,7 @@ static NativeSymbol exports[]={
  */
  
 ITEST(wamr_basic_run) {
-  const char *wpath="out/wasm/hello.wasm";
+  const char *wpath="out/web/hello.wasm";
   void *serial=0;
   int serialc=file_read(&serial,wpath);
   ASSERT_CALL(serialc,"%s: Failed to read file",wpath)

@@ -1,9 +1,9 @@
 #include "test/test.h"
-#include "img/rawimg/rawimg.h"
-#include "img/jpeg/jpeg.h"
-#include "img/png/png.h"
-#include "serial/serial.h"
-#include "fs/fs.h"
+#include "opt/rawimg/rawimg.h"
+#include "opt/jpeg/jpeg.h"
+#include "opt/png/png.h"
+#include "opt/serial/serial.h"
+#include "opt/fs/fs.h"
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>

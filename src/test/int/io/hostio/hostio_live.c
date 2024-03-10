@@ -6,11 +6,12 @@
  */
 
 #include "test/test.h"
-#include "io/hostio/hostio.h"
-#include "fs/fs.h"
-#include "img/rawimg/rawimg.h"
+#include "opt/hostio/hostio.h"
+#include "opt/fs/fs.h"
+#include "opt/rawimg/rawimg.h"
 #include <signal.h>
 #include <unistd.h>
+#include <limits.h>
 
 /* Test configuration.
  */
@@ -30,10 +31,10 @@
  */
 #define HOSTIO_LIVE_FRAME_SLEEP_US 16666
 
-// Frequency in Hertz, level in 0..32767.
-// Set either to zero to disable. Which you'll probably want, it's kind of obnoxious.
+// Frequency in Hertz, level in 0..32767. Zero either to disable.
+// Press 's' to play a sound if enabled.
 #define TONE_FREQ 300
-#define AUDIO_LEVEL 0
+#define AUDIO_LEVEL 5000
 
 // If the driver supports framebuffers we use it.
 // But for those that don't, we do a cheap OpenGL cudgel right here too. Optionally.
@@ -48,7 +49,7 @@ static struct hostio_video_fb_description fbdesc={0};
 static int vframec=0;
 static struct rawimg *spritebits=0;
 static int spritex=100,spritey=40,spritedx=1,spritedy=1;
-static int16_t audio_level=AUDIO_LEVEL;
+static int16_t audio_level=0;
 
 /* Signals.
  */
@@ -60,6 +61,65 @@ static void cb_signal(int sigid) {
         exit(1);
       } break;
   }
+}
+
+/* Generate some audio.
+ */
+ 
+static int audio_half_period=0;
+static int audio_remaining=0;
+static int audio_periods_remaining=0;
+
+static void synthesize_audio(int16_t *v,int c) { // mono only, and audio_half_period must be positive
+  while (c>0) {
+    int cpc=c;
+    if (cpc>audio_remaining) cpc=audio_remaining;
+    c-=cpc;
+    audio_remaining-=cpc;
+    for (;cpc-->0;v++) *v=audio_level;
+    if (audio_remaining<=0) {
+      audio_remaining=audio_half_period;
+      audio_level=-audio_level;
+      if (--audio_periods_remaining<=0) {
+        audio_level=0;
+        audio_periods_remaining=0;
+        audio_remaining=INT_MAX;
+      }
+    }
+  }
+}
+
+static void expand_audio(int16_t *v,int framec,int chanc) {
+  int16_t *dstp=v+framec*chanc;
+  const int16_t *srcp=v+framec;
+  while (framec-->0) {
+    srcp--;
+    int chi=chanc;
+    while (chi-->0) {
+      dstp--;
+      *dstp=*srcp;
+    }
+  }
+}
+
+static void cb_pcm_out(int16_t *v,int c,struct hostio_audio *driver) {
+  if (audio_half_period<1) {
+    memset(v,0,c<<1);
+  } else if (driver->chanc>1) {
+    int framec=c/driver->chanc;
+    synthesize_audio(v,framec);
+    expand_audio(v,framec,driver->chanc);
+  } else {
+    synthesize_audio(v,c);
+  }
+}
+
+static void play_sound() {
+  if (!AUDIO_LEVEL||!TONE_FREQ) return;
+  if (audio_half_period<1) return;
+  audio_remaining=audio_half_period;
+  audio_periods_remaining=44100/audio_half_period;
+  audio_level=AUDIO_LEVEL;
 }
 
 /* Driver callbacks.
@@ -89,6 +149,7 @@ static void cb_text(struct hostio_video *driver,int codepoint) {
   switch (codepoint) {
     case 0x1b: closed_window=1; break; // ESC is equivalent to closing the window, for us.
     case 'f': hostio_toggle_fullscreen(hostio); break;
+    case 's': play_sound(); break;
   }
 }
 
@@ -110,6 +171,7 @@ static void cb_disconnect(struct hostio_input *driver,int devid) {
 
 static void cb_button(struct hostio_input *driver,int devid,int btnid,int value) {
   fprintf(stderr,"%s %d.%08x=%d\n",__func__,devid,btnid,value);
+  if (value==1) play_sound();
 }
 
 /* Callback: Input device connected.
@@ -138,51 +200,6 @@ static void cb_connect(struct hostio_input *driver,int devid) {
     }
   } else {
     fprintf(stderr,"%s: %s:%d: Driver does not supply button declarations. Is that a bug?\n",__func__,driver->type->name,devid);
-  }
-}
-
-/* Generate some audio.
- */
- 
-static int audio_half_period=0;
-static int audio_remaining=0;
-
-static void synthesize_audio(int16_t *v,int c) { // mono only, and audio_half_period must be positive
-  while (c>0) {
-    int cpc=c;
-    if (cpc>audio_remaining) cpc=audio_remaining;
-    c-=cpc;
-    audio_remaining-=cpc;
-    for (;cpc-->0;v++) *v=audio_level;
-    if (audio_remaining<=0) {
-      audio_remaining=audio_half_period;
-      audio_level=-audio_level;
-    }
-  }
-}
-
-static void expand_audio(int16_t *v,int framec,int chanc) {
-  int16_t *dstp=v+framec*chanc;
-  const int16_t *srcp=v+framec;
-  while (framec-->0) {
-    srcp--;
-    int chi=chanc;
-    while (chi-->0) {
-      dstp--;
-      *dstp=*srcp;
-    }
-  }
-}
-
-static void cb_pcm_out(int16_t *v,int c,struct hostio_audio *driver) {
-  if (audio_half_period<1) {
-    memset(v,0,c<<1);
-  } else if (driver->chanc>1) {
-    int framec=c/driver->chanc;
-    synthesize_audio(v,framec);
-    expand_audio(v,framec,driver->chanc);
-  } else {
-    synthesize_audio(v,c);
   }
 }
 

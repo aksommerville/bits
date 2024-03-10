@@ -1,7 +1,7 @@
 #include "test/test.h"
-#include "http/http.h"
-#include "serial/serial.h"
-#include "fs/fs.h"
+#include "opt/http/http.h"
+#include "opt/serial/serial.h"
+#include "opt/fs/fs.h"
 #include <signal.h>
 #include <stdint.h>
 

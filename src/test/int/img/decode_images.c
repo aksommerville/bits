@@ -1,7 +1,7 @@
 #include "test/test.h"
-#include "img/rawimg/rawimg.h"
-#include "fs/fs.h"
-#include "serial/serial.h"
+#include "opt/rawimg/rawimg.h"
+#include "opt/fs/fs.h"
+#include "opt/serial/serial.h"
 #include <stdlib.h>
 #include <limits.h>
 #include <string.h>

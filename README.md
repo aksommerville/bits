@@ -25,16 +25,16 @@ Things we can copy, try to keep them self-contained.
 - `hostio`: Wraps I/O drivers with abstract types.
 - `simplifio`: Same idea but no generic driver types. More efficient and easier to understand, with some flexibility lost.
 - `midi`: Read streams and files, and a bunch of helpful constants.
+- `wav`: Encode and decode WAV files.
 - `qjs`: QuickJS adapter.
 - `wamr`: wasm-micro-runtime adapter.
 - `http`: HTTP+WebSocket client and server, for dev tooling. Don't use on the public internet.
-
 
 ## TODO
 
 - [x] wav
 - [ ] Drivers with private interfaces
-- - [ ] bcm
+- - [x] bcm
 - - [ ] ossmidi
 - - [ ] macioc
 - - [ ] macwm

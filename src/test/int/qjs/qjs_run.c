@@ -1,6 +1,6 @@
 #include "test/test.h"
-#include "qjs/qjs.h"
-#include "fs/fs.h"
+#include "opt/qjs/qjs.h"
+#include "opt/fs/fs.h"
 #include "quickjs.h"
 
 /* Some functions to expose to our scripts.
