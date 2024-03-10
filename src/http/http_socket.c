@@ -199,8 +199,9 @@ int http_socket_configure_websocket_client(struct http_socket *sock,const char *
   if (http_socket_newfd_remote(sock,url,urlc)<0) return -1;
   if (connect(sock->fd,(struct sockaddr*)sock->saddr,sock->saddrc)<0) return -1;
   if (!(sock->ws=http_websocket_new(sock->ctx))) return -1;
-  //TODO Send WebSocket handshake.
+  if (http_websocket_encode_upgrade_request(&sock->wbuf,sock->ws,url,urlc)<0) return -1;
   sock->role=HTTP_SOCKET_ROLE_WEBSOCKET;
+  sock->awaiting_upgrade=1;
   return 0;
 }
 
@@ -467,11 +468,75 @@ static int http_socket_deliver_HTTP_RCVBODY(struct http_socket *sock,const char 
 }
 
 /* Receive WebSocket packet.
+ * (src) is deliberately not "const" -- if masked, we rewrite it in place.
  */
  
-static int http_socket_deliver_WEBSOCKET(struct http_socket *sock,const uint8_t *src,int srcc) {
-  fprintf(stderr,"%s TODO\n",__func__);
-  return -1;
+static int http_socket_deliver_WEBSOCKET(struct http_socket *sock,uint8_t *src,int srcc) {
+
+  if (sock->awaiting_upgrade) {
+    // We really ought to read the upgrade response and confirm that the server is willing to upgrade.
+    // But we'll just assume that it's cool, and if the server chokes on the WebSocket packets we send it later, well, it should have listened.
+    // (ditto if we choke on HTTP packets the server sends later...)
+    if ((srcc>=4)&&!memcmp(src,"\r\n\r\n",4)) {
+      sock->awaiting_upgrade=0;
+      return 4;
+    }
+    int srcp=0;
+    while ((srcp<srcc)&&(src[srcp]!='\r')) srcp++;
+    if (srcp) return srcp;
+    if (srcc>=4) return 1;
+    return 0;
+  }
+  
+  // Fixed-length preamble.
+  if (srcc<2) return 0;
+  uint8_t flags=src[0]&0xf0;
+  uint8_t opcode=src[0]&0x0f;
+  uint8_t hasmask=src[1]&0x80;
+  const uint8_t *mask=0;
+  int len=src[1]&0x7f;
+  int srcp=2;
+  
+  if (!(flags&0x80)) {
+    fprintf(stderr,"WebSocket packet with continuation: We don't support this.\n");
+    return -1;
+  }
+  
+  // Length.
+  if (len==0x7e) {
+    if (srcc<4) return 0;
+    len=(src[2]<<8)|src[3];
+    srcp=4;
+  } else if (len==0x7f) {
+    if (srcc<10) return 0;
+    if (memcmp(src+2,"\0\0\0\0\0",5)) return -1; // >24-bit length, forget that.
+    len=(src[7]<<16)|(src[8]<<8)|src[9];
+    srcp=10;
+  }
+  
+  // Mask.
+  if (hasmask) {
+    if (srcp>srcc-4) return 0;
+    mask=src+srcp;
+    srcp+=4;
+  }
+  
+  // Payload.
+  if (srcp>srcc-len) return 0;
+  uint8_t *body=src+srcp;
+  srcp+=len;
+  
+  // Apply mask.
+  if (hasmask) {
+    int i=0; for (;i<len;i++) body[i]^=mask[i&3];
+  }
+  
+  // Send to delegate.
+  if (sock->ws&&sock->ws->cb) {
+    if (sock->ws->cb(sock->ws,opcode,body,len)<0) return -1;
+  }
+  
+  return srcp;
 }
 
 /* Receive data.

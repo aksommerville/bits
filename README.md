@@ -45,5 +45,5 @@ Things we can copy, try to keep them self-contained.
 - [x] quickjs client
 - [ ] libjpeg client
 - [x] HTTP server and client
-- [ ] WebSocket
+- [x] WebSocket
 - [x] Filesystem conveniences

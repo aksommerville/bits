@@ -1,7 +1,9 @@
 #include "test/test.h"
 #include "http/http.h"
 #include "serial/serial.h"
+#include "fs/fs.h"
 #include <signal.h>
+#include <stdint.h>
 
 /* Signal handler.
  */
@@ -129,6 +131,139 @@ XXX_ITEST(http_server) {
   fprintf(stderr,"Running on port %d. SIGINT to quit.\n",port);
   while (!sigc) {
     ASSERT_CALL(http_update(ctx,1000))
+  }
+  
+  fprintf(stderr,"Normal exit.\n");
+  http_context_del(ctx);
+  return 0;
+}
+
+/* WebSocket server.
+ */
+ 
+static int ws_server_cb_default(struct http_xfer *req,struct http_xfer *rsp) {
+  char method[16];
+  int methodc=http_xfer_get_method(method,sizeof(method),req);
+  if ((methodc<1)||(methodc>=sizeof(method))) return -1;
+  const char *path=0;
+  int pathc=http_xfer_get_path(&path,req);
+  if (pathc<0) return -1;
+  fprintf(stderr,"%s %.*s %.*s\n",__func__,methodc,method,pathc,path);
+  return -1;
+}
+
+static int ws_server_cb_get_html(struct http_xfer *req,struct http_xfer *rsp) {
+  void *html=0;
+  int htmlc=file_read(&html,"src/test/int/http/ws_client.html");
+  if (htmlc<0) return -1;
+  sr_encode_raw(http_xfer_get_body(rsp),html,htmlc);
+  free(html);
+  http_xfer_set_header(rsp,"Content-Type",12,"text/html",9);
+  http_xfer_set_status(rsp,200,"OK");
+  return 0;
+}
+
+static int ws_server_cb_message(struct http_websocket *ws,int opcode,const void *v,int c) {
+  if (opcode<0) {
+    return 0;
+  }
+  int istext=1,i=c;
+  while (i-->0) {
+    uint8_t ch=((uint8_t*)v)[i];
+    if ((ch<0x20)||(ch>0x7e)) {
+      istext=0;
+      break;
+    }
+  }
+  if (istext) {
+    fprintf(stderr,"%s[%d]: '%.*s'\n",__func__,opcode,c,(char*)v);
+  } else {
+    fprintf(stderr,"%s[%d]: %d bytes\n",__func__,opcode,c);
+  }
+  http_websocket_send(ws,1,"Server acknowledges.",20);
+  return 0;
+}
+
+static int ws_server_cb_ws(struct http_xfer *req,struct http_xfer *rsp) {
+  struct http_websocket *ws=http_websocket_check_upgrade(req,rsp);
+  if (!ws) return -1;
+  fprintf(stderr,"UPGRADED TO WEBSOCKET\n");
+  http_websocket_set_callback(ws,ws_server_cb_message);
+  return 0;
+}
+ 
+static int ws_server_cb_serve(struct http_xfer *req,struct http_xfer *rsp,void *userdata) {
+  return http_dispatch(req,rsp,
+    HTTP_METHOD_GET,"/ws_client.html",ws_server_cb_get_html,
+    HTTP_METHOD_GET,"/ws",ws_server_cb_ws,
+    0,"",ws_server_cb_default
+  );
+  return 0;
+}
+ 
+XXX_ITEST(ws_server) {
+  signal(SIGINT,rcvsig);
+  
+  struct http_context_delegate delegate={
+    .cb_serve=ws_server_cb_serve,
+  };
+  struct http_context *ctx=http_context_new(&delegate);
+  ASSERT(ctx)
+  
+  int port=8080;
+  ASSERT_CALL(http_listen(ctx,1,port))
+  
+  fprintf(stderr,"Running on port %d. SIGINT to quit.\n",port);
+  while (!sigc) {
+    ASSERT_CALL(http_update(ctx,1000))
+  }
+  
+  fprintf(stderr,"Normal exit.\n");
+  http_context_del(ctx);
+  return 0;
+}
+
+/* WebSocket client.
+ * Run this while the WebSocket server demo above is running.
+ */
+ 
+static struct http_websocket *myws=0;
+ 
+static int cb_ws_client_message(struct http_websocket *ws,int opcode,const void *v,int c) {
+  if ((opcode<0)&&(ws==myws)) {
+    fprintf(stderr,"WebSocket disconnected.\n");
+    myws=0;
+  } else {
+    fprintf(stderr,"IN: %.*s\n",c,(char*)v);
+  }
+  return 0;
+}
+ 
+XXX_ITEST(ws_client) {
+  signal(SIGINT,rcvsig);
+  
+  double beacon_frequency=1.0;
+  double recent_time=http_now();
+  int beaconc=0;
+  
+  struct http_context *ctx=http_context_new(0);
+  ASSERT(ctx)
+  
+  ASSERT(myws=http_websocket_connect(ctx,"http://localhost:8080/ws",-1,cb_ws_client_message,0))
+  
+  fprintf(stderr,"Will send a WebSocket packet every %.03f s until SIGINT...\n",beacon_frequency);
+  while (!sigc&&myws) {
+    ASSERT_CALL(http_update(ctx,500))
+    if (!myws) break;
+    double now=http_now();
+    double elapsed=now-recent_time;
+    if (elapsed>=beacon_frequency) {
+      recent_time=now;
+      char msg[128];
+      int msgc=snprintf(msg,sizeof(msg),"This is message #%d from the client.",++beaconc);
+      fprintf(stderr,"OUT: %.*s\n",msgc,msg);
+      ASSERT_CALL(http_websocket_send(myws,1,msg,msgc))
+    }
   }
   
   fprintf(stderr,"Normal exit.\n");

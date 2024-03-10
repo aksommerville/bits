@@ -37,6 +37,16 @@ struct http_socket *http_context_add_server_stream(
   struct http_socket *server
 );
 
+struct http_socket *http_context_socket_for_request(
+  const struct http_context *ctx,
+  const struct http_xfer *req
+);
+
+struct http_socket *http_context_socket_for_websocket(
+  const struct http_context *ctx,
+  const struct http_websocket *ws
+);
+
 /* Socket.
  **************************************************************/
 
@@ -73,6 +83,7 @@ struct http_socket {
   int hoststrc;
   int chunked;
   int expectc;
+  int awaiting_upgrade;
   
   /* Read and write buffers.
    * When (wbufp<wbuf.c), we must write out before doing anything else.
@@ -128,6 +139,12 @@ struct http_websocket {
 
 void http_websocket_del(struct http_websocket *ws);
 struct http_websocket *http_websocket_new(struct http_context *ctx);
+
+int http_websocket_encode_upgrade_request(
+  struct sr_encoder *dst,
+  struct http_websocket *ws,
+  const char *url,int urlc
+);
 
 /* Transfer.
  ****************************************************************/

@@ -98,6 +98,33 @@ static int http_context_count_requests(const struct http_context *ctx) {
   return reqc;
 }
 
+/* Find socket by request xfer.
+ */
+ 
+struct http_socket *http_context_socket_for_request(
+  const struct http_context *ctx,
+  const struct http_xfer *req
+) {
+  struct http_socket **sockp=ctx->socketv;
+  int i=ctx->socketc;
+  for (;i-->0;sockp++) {
+    if ((*sockp)->req==req) return *sockp;
+  }
+  return 0;
+}
+
+struct http_socket *http_context_socket_for_websocket(
+  const struct http_context *ctx,
+  const struct http_websocket *ws
+) {
+  struct http_socket **sockp=ctx->socketv;
+  int i=ctx->socketc;
+  for (;i-->0;sockp++) {
+    if ((*sockp)->ws==ws) return *sockp;
+  }
+  return 0;
+}
+
 /* Add server.
  */
 

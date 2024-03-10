@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+html {
+  background-color: #000;
+  color: #fff;
+}
+</style>
+<script>
+let sock = null;
+let connected = false;
+
+function onOpen(e) {
+  console.log(`onOpen`, e);
+  document.getElementById("log").innerText += "OPENED\n";
+  connected = true;
+}
+
+function onClose(e) {
+  console.log(`onClose`, e);
+  document.getElementById("log").innerText += "CLOSED\n";
+  connected = false;
+  sock = null;
+}
+
+function onMessage(e) {
+  console.log(`onMessage`, e);
+  document.getElementById("log").innerText += e.data + "\n";
+}
+
+function reconnect() {
+  document.getElementById("log").innerText += "RECONNECT\n";
+  if (sock) {
+    sock.close();
+    sock = null;
+    connected = false;
+  }
+  sock = new WebSocket("ws://localhost:8080/ws");
+  sock.addEventListener("open", e => onOpen(e));
+  sock.addEventListener("close", e => onClose(e));
+  sock.addEventListener("message", e => onMessage(e));
+}
+
+function disconnect() {
+  document.getElementById("log").innerText += "DISCONNECT\n";
+  if (sock) {
+    sock.close();
+    sock = null;
+    connected = false;
+  }
+}
+
+function send(content) {
+  if (!connected) return;
+  if (!content) content = "Hello this is the client.";
+  document.getElementById("log").innerText += `SENDING ${JSON.stringify(content)}\n`;
+  sock.send(content);
+}
+
+window.addEventListener("load", () => {
+  reconnect();
+});
+</script>
+</head>
+<body>
+<input type="button" value="reconnect" onclick="reconnect()"/>
+<input type="button" value="disconnect" onclick="disconnect()"/>
+<input type="button" value="send", onclick="send()"/>
+<pre id="log"></pre>
+</body>
+</html>

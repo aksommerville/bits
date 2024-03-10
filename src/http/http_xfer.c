@@ -53,7 +53,9 @@ int http_xfer_configure_client_request(
  */
 
 void http_request_cancel(struct http_xfer *req) {
-  fprintf(stderr,"%s TODO\n",__func__);
+  struct http_socket *sock=http_context_socket_for_request(req->ctx,req);
+  if (!sock) return;
+  http_socket_force_defunct(sock);
 }
 
 /* Trivial accessors.
