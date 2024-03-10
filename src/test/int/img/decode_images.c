@@ -178,6 +178,11 @@ static int di_compare_images(
   if (!a||!b) return 0;
   if ((a->w!=b->w)||(a->h!=b->h)) return 0;
   
+  /* For lossy formats, we have to assume that pixels will change a little.
+   * Call it ok as long as the dimensions match, I think that's all we can do.
+   */
+  if (!strcmp(fmt,"jpeg")) return 1;
+  
   /* If (pixelsize,chorder,bitorder,rmask) match, compare by memcmp, easy.
    * But not if color tables are in play, then all bets are off.
    */

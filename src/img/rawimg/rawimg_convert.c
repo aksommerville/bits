@@ -123,6 +123,15 @@ int rawimg_is_rgba(const struct rawimg *rawimg) {
   return 1;
 }
 
+int rawimg_is_rgb(const struct rawimg *rawimg) {
+  if (!rawimg) return 0;
+  if (rawimg->pixelsize!=24) return 0;
+  if (!memcmp(rawimg->chorder,"rgb\0",4)) return 2;
+  if (!memcmp(rawimg->chorder,"RGB\0",4)) return 2;
+  if (!rawimg->chorder[0]) return 1;
+  return 0;
+}
+
 int rawimg_is_y8(const struct rawimg *rawimg) {
   if (!rawimg) return 0;
   if (rawimg->pixelsize!=8) return 0;
@@ -348,8 +357,9 @@ static int rawimg_force_to_rgba(struct rawimg *rawimg) {
     return -1;
   }
 
-  free(rawimg->v);
+  if (rawimg->ownv) free(rawimg->v);
   rawimg->v=nv;
+  rawimg->ownv=1;
   rawimg->stride=rawimg->w<<2;
   rawimg->pixelsize=32;
   memcpy(rawimg->chorder,"rgba",4);
@@ -365,6 +375,89 @@ static int rawimg_force_to_rgba(struct rawimg *rawimg) {
     rawimg->bmask=0x00ff0000;
     rawimg->amask=0xff000000;
   }
+  return 0;
+}
+
+/* Swizzle to RGB.
+ */
+ 
+static int rawimg_swizzle_to_rgb(struct rawimg *rawimg) {
+  int rp=0,gp=0,bp=0,i;
+  for (i=0;i<4;i++) {
+    switch (rawimg->chorder[i]) {
+      case 'r': case 'R': rp=i; break;
+      case 'g': case 'G': gp=i; break;
+      case 'b': case 'B': bp=i; break;
+    }
+  }
+  uint8_t *row=rawimg->v;
+  int yi=rawimg->h;
+  for (;yi-->0;row+=rawimg->stride) {
+    uint8_t *p=row;
+    int xi=rawimg->w;
+    for (;xi-->0;p+=3) {
+      uint8_t r=p[rp],g=p[gp],b=p[bp];
+      p[0]=r;
+      p[1]=g;
+      p[2]=b;
+    }
+  }
+  memcpy(rawimg->chorder,"rgb\0",4);
+  return 0;
+}
+
+/* Force to RGB.
+ */
+ 
+static int rawimg_force_to_rgb(struct rawimg *rawimg) {
+  struct rawimg_iterator iter={0};
+  if (rawimg_iterate(&iter,rawimg,0,0,rawimg->w,rawimg->h,0)<0) return -1;
+  int nstride=rawimg->w*3;
+  uint8_t *nv=malloc(nstride*rawimg->h);
+  if (!nv) return -1;
+  uint8_t *dstp=nv;
+  
+  // We will operate only off channel masks.
+  // If they're absent, assume grayscale.
+  int rp=0,rc=0,gp=0,gc=0,bp=0,bc=0;
+  if (rawimg->rmask) {
+    uint32_t tmp;
+    if (tmp=rawimg->rmask) { while (!(tmp&1)) { tmp>>=1; rp++; } while (tmp&1) { tmp>>=1; rc++; } }
+    if (tmp=rawimg->gmask) { while (!(tmp&1)) { tmp>>=1; gp++; } while (tmp&1) { tmp>>=1; gc++; } }
+    if (tmp=rawimg->bmask) { while (!(tmp&1)) { tmp>>=1; bp++; } while (tmp&1) { tmp>>=1; bc++; } }
+    if (rc>8) { rp+=rc-8; rc=8; }
+    if (gc>8) { gp+=gc-8; gc=8; }
+    if (bc>8) { bp+=gc-8; gc=8; }
+  } else {
+    rc=gc=bc=rawimg->pixelsize;
+  }
+  
+  do {
+    uint32_t pixel=rawimg_iterator_read(&iter);
+    #define EXPAND(ch) if (ch##c&&(ch##c<8)) { \
+      ch<<=(8-ch##c); \
+      int havec=ch##c; \
+      while (havec<8) { \
+        ch|=ch>>havec; \
+        havec<<=1; \
+      } \
+    }
+    uint8_t r=pixel>>rp; EXPAND(r)
+    uint8_t g=pixel>>gp; EXPAND(g)
+    uint8_t b=pixel>>bp; EXPAND(b)
+    #undef EXPAND
+    *(dstp++)=r;
+    *(dstp++)=g;
+    *(dstp++)=b;
+  } while (rawimg_iterator_next(&iter));
+  
+  if (rawimg->ownv) free(rawimg->v);
+  rawimg->v=nv;
+  rawimg->ownv=1;
+  rawimg->stride=nstride;
+  rawimg->pixelsize=24;
+  memcpy(rawimg->chorder,"rgb\0",4);
+  rawimg->rmask=rawimg->gmask=rawimg->bmask=rawimg->amask=0;
   return 0;
 }
 
@@ -446,6 +539,39 @@ static int rawimg_expand_ctab(struct rawimg *rawimg) {
     rawimg->bmask=0x00ff0000;
     rawimg->amask=0xff000000;
   }
+  free(rawimg->ctab);
+  rawimg->ctab=0;
+  rawimg->ctabc=0;
+  return 0;
+}
+
+/* Rewrite as RGB by expanding color table.
+ */
+ 
+static int rawimg_expand_ctab_rgb(struct rawimg *rawimg) {
+  if (!rawimg->ctab) return -1;
+  struct rawimg_iterator iter;
+  if (rawimg_iterate(&iter,rawimg,0,0,rawimg->w,rawimg->h,0)<0) return -1;
+  uint8_t *nv=malloc(rawimg->w*rawimg->h*3);
+  if (!nv) return -1;
+  uint8_t *dstp=nv;
+  int i=rawimg->w*rawimg->h;
+  while (i-->0) {
+    int ix=rawimg_iterator_read(&iter);
+    if ((ix>=0)&&(ix<rawimg->ctabc)) {
+      memcpy(dstp,((uint32_t*)rawimg->ctab)+ix,3);
+    } else {
+      dstp[0]=dstp[1]=dstp[2]=0;
+    }
+    if (!rawimg_iterator_next(&iter)) break;
+    dstp+=3;
+  }
+  free(rawimg->v);
+  rawimg->v=nv;
+  rawimg->stride=rawimg->w*3;
+  rawimg->pixelsize=24;
+  memcpy(rawimg->chorder,"rgb\0",4);
+  rawimg->rmask=rawimg->gmask=rawimg->bmask=rawimg->amask=0;
   free(rawimg->ctab);
   rawimg->ctab=0;
   rawimg->ctabc=0;
@@ -686,6 +812,18 @@ int rawimg_force_rgba(struct rawimg *rawimg) {
     return rawimg_swizzle_to_rgba(rawimg);
   }
   return rawimg_force_to_rgba(rawimg);
+}
+
+int rawimg_force_rgb(struct rawimg *rawimg) {
+  if (!rawimg) return -1;
+  if (rawimg_is_rgb(rawimg)) return 0;
+  if (rawimg->ctabc) {
+    return rawimg_expand_ctab_rgb(rawimg);
+  }
+  if (rawimg->pixelsize==24) {
+    return rawimg_swizzle_to_rgb(rawimg);
+  }
+  return rawimg_force_to_rgb(rawimg);
 }
 
 int rawimg_force_y8(struct rawimg *rawimg) {

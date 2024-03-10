@@ -523,14 +523,49 @@ static struct rawimg *rawimg_decode_rlead(const uint8_t *src,int srcc) {
  
 #if USE_jpeg
 
-//TODO libjpeg client
+#include "img/jpeg/jpeg.h"
 
 static int rawimg_encode_jpeg(struct sr_encoder *encoder,const struct rawimg *rawimg) {
-  return -1;//TODO
+  struct rawimg *killme=0;
+  if (!rawimg_is_rgb(rawimg)&&!rawimg_is_y8(rawimg)) {
+    if (!(killme=rawimg_new_copy(rawimg))||(rawimg_force_rgb(killme)<0)) return -1;
+    rawimg=killme;
+  }
+  struct jpeg_image jpeg={
+    .v=rawimg->v,
+    .w=rawimg->w,
+    .h=rawimg->h,
+    .stride=rawimg->stride,
+    .chanc=rawimg->pixelsize>>3,
+  };
+  int err=jpeg_encode(encoder,&jpeg);
+  rawimg_del(killme);
+  return err;
 }
 
 static struct rawimg *rawimg_decode_jpeg(const uint8_t *src,int srcc) {
-  return 0;//TODO
+  struct jpeg_image *jpeg=jpeg_decode(src,srcc);
+  if (!jpeg) return 0;
+  int pixelsize=jpeg->chanc*8;
+  struct rawimg *rawimg=rawimg_new_handoff(jpeg->v,jpeg->w,jpeg->h,jpeg->stride,pixelsize);
+  if (!rawimg) {
+    jpeg_image_del(jpeg);
+    return 0;
+  }
+  jpeg->v=0; // handed off
+  switch (jpeg->chanc) {
+    case 1: {
+        memcpy(rawimg->chorder,"y\0\0\0",4);
+        rawimg->rmask=rawimg->gmask=rawimg->bmask=0xff;
+        rawimg->amask=0;
+      } break;
+    case 3: {
+        memcpy(rawimg->chorder,"rgb\0",4);
+        rawimg->rmask=rawimg->gmask=rawimg->bmask=rawimg->amask=0;
+      } break;
+  }
+  jpeg_image_del(jpeg);
+  return rawimg;
 }
 
 #endif

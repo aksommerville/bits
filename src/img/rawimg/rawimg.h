@@ -102,9 +102,11 @@ struct rawimg *rawimg_new_convert(
  *  - rgba8, R stored first.
  *  - y8.
  *  - y1be.
+ * We also supply "rgb", 24 bits, R first, but do not generically canonicalize to it.
  */
 int rawimg_canonicalize(struct rawimg *rawimg);
 int rawimg_force_rgba(struct rawimg *rawimg);
+int rawimg_force_rgb(struct rawimg *rawimg);
 int rawimg_force_y8(struct rawimg *rawimg);
 int rawimg_force_y1(struct rawimg *rawimg);
 
@@ -112,6 +114,7 @@ int rawimg_force_y1(struct rawimg *rawimg);
  * "Ambiguous" means the size is correct but format isn't fully specified.
  */
 int rawimg_is_rgba(const struct rawimg *rawimg);
+int rawimg_is_rgb(const struct rawimg *rawimg);
 int rawimg_is_y8(const struct rawimg *rawimg);
 int rawimg_is_y1(const struct rawimg *rawimg);
 

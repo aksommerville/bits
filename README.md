@@ -43,7 +43,7 @@ Things we can copy, try to keep them self-contained.
 - [x] Host IO abstraction
 - [x] wasm-micro-runtime client
 - [x] quickjs client
-- [ ] libjpeg client
+- [x] libjpeg client
 - [x] HTTP server and client
 - [x] WebSocket
 - [x] Filesystem conveniences
