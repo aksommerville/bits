@@ -1,6 +1,6 @@
 /* simplifio.h
  * Required: serial
- * Optional:
+ * Optional: (all io units)
  *
  * Alternative to "hostio", without the abstraction layer.
  * We initialize video, audio, and input units directly, employing the preprocessor heavily.

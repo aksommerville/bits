@@ -23,7 +23,7 @@ LDPOST:=-lm -lz -ljpeg -lX11 -lXinerama -lpulse-simple -lGL -lpthread -lasound -
 
 # Declare all the "optional" units as in-use.
 USE_ALL_OPT:=$(patsubst %,-DUSE_%=1, \
-  midi serial fs http wamr qjs \
+  midi wav serial fs http wamr qjs \
   hostio evdev glx drmgx x11fb drmfb alsafd asound pulse \
   rawimg gif bmp qoi rlead ico png jpeg \
   xinerama \
