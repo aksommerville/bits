@@ -1,3 +1,5 @@
+#if USE_jpeg
+
 #include "test/test.h"
 #include "opt/rawimg/rawimg.h"
 #include "opt/jpeg/jpeg.h"
@@ -106,3 +108,10 @@ ITEST(jpeg_decode_error) {
   // The real assertion is that we complete at all.
   return 0;
 }
+
+#else
+
+int jpeg_reencode() { return 0; }
+int jpeg_decode_error() { return 0; }
+
+#endif

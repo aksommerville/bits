@@ -217,7 +217,7 @@ void simplifio_video_show_cursor(int show) {
     if (simplifio.x11fb) { x11fb_show_cursor(simplifio.x11fb,show); return; }
   #endif
   #if USE_macwm
-    if (simplifio.macwm) { macwm_show_cursor(simplifio.macwm,show); return; }
+    if (simplifio.macwm) { /*TODO macwm_show_cursor(simplifio.macwm,show);*/ return; }
   #endif
   #if USE_mswm
     if (simplifio.mswm) { mswm_show_cursor(simplifio.mswm,show); return; }
@@ -298,7 +298,7 @@ int simplifio_video_describe_fb(struct simplifio_fb_description *desc) {
     }
   #endif
   #if USE_macwm
-    if (simplifio.macwm) return -1;//TODO
+    if (simplifio.macwm) return -1;//TODO macwm does have a framebuffer mode but the semantics are a little odd, will need tweaks
   #endif
   #if USE_mswm
     if (simplifio.mswm) return -1;//TODO
@@ -313,9 +313,6 @@ void *simplifio_video_begin_fb() {
   #if USE_drmfb
     if (simplifio.drmfb) return drmfb_begin(simplifio.drmfb);
   #endif
-  #if USE_macwm
-    if (simplifio.macwm) return macwm_fb_begin(simplifio.macwm);
-  #endif
   #if USE_mswm
     if (simplifio.mswm) return mswm_fb_begin(simplifio.mswm);
   #endif
@@ -328,9 +325,6 @@ int simplifio_video_end_fb() {
   #endif
   #if USE_drmfb
     if (simplifio.drmfb) return drmfb_end(simplifio.drmfb);
-  #endif
-  #if USE_macwm
-    if (simplifio.macwm) return macwm_fb_end(simplifio.macwm);
   #endif
   #if USE_mswm
     if (simplifio.mswm) return mswm_fb_end(simplifio.mswm);
@@ -374,7 +368,7 @@ int simplifio_video_begin_gx() {
     if (simplifio.bcm) return 0;
   #endif
   #if USE_macwm
-    if (simplifio.macwm) return macwm_gx_begin(simplifio.macwm);
+    if (simplifio.macwm) return macwm_render_begin(simplifio.macwm);
   #endif
   #if USE_mswm
     if (simplifio.mswm) return mswm_gx_begin(simplifio.mswm);
@@ -393,7 +387,7 @@ int simplifio_video_end_gx() {
     if (simplifio.bcm) return bcm_swap();
   #endif
   #if USE_macwm
-    if (simplifio.macwm) return macwm_gx_end(simplifio.macwm);
+    if (simplifio.macwm) { macwm_render_end(simplifio.macwm); return 0; }
   #endif
   #if USE_mswm
     if (simplifio.mswm) return mswm_gx_end(simplifio.mswm);
@@ -423,7 +417,7 @@ void simplifio_input_disconnect(int devid) {
   #endif
   #if USE_machid
     if (simplifio.machid) {
-      machid_device_disconnect(simplifio.machid,devid);
+      //TODO not provided by machid but should be: machid_device_disconnect(simplifio.machid,devid);
       return;
     }
   #endif
@@ -444,7 +438,10 @@ const char *simplifio_input_get_ids(int *vid,int *pid,int *version,int devid) {
     }
   #endif
   #if USE_machid
-    if (simplifio.machid) return machid_device_get_ids(vid,pid,version,simplifio.machid,devid);
+    if (simplifio.machid) {
+      *version=0;
+      return machid_get_ids(vid,pid,simplifio.machid,devid);
+    }
   #endif
   #if USE_mshid
     if (simplifio.mshid) return mshid_device_get_ids(vid,pid,version,simplifio.mshid,devid);
@@ -478,7 +475,7 @@ int simplifio_input_for_each_button(
     }
   #endif
   #if USE_machid
-    if (simplifio.machid) return machid_for_each_button(simplifio.machid,devid,cb,userdata);
+    if (simplifio.machid) return machid_enumerate(simplifio.machid,devid,cb,userdata);
   #endif
   #if USE_mshid
     if (simplifio.mshid) return mshid_for_each_button(simplifio.mshid,devid,cb,userdata);

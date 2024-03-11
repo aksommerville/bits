@@ -87,24 +87,19 @@ void simplifio_quit() {
 #endif
  
 #if USE_machid
-  static void simplifio_cb_machid_connect(struct machid *machid,struct machid_device *device) {
-    if (simplifio.input_devid>=INT_MAX) return;
-    int devid=simplifio.input_devid++;
-    machid_device_set_devid(device,devid);
+  static void simplifio_cb_machid_connect(struct machid *machid,int devid) {
     if (simplifio.delegate.cb_connect) {
       simplifio.delegate.cb_connect(simplifio.delegate.userdata,devid);
     }
   }
   
-  static void simplifio_cb_machid_disconnect(struct machid *machid,struct machid_device *device) {
-    int devid=machid_device_get_devid(device);
+  static void simplifio_cb_machid_disconnect(struct machid *machid,int devid) {
     if (simplifio.delegate.cb_disconnect) {
       simplifio.delegate.cb_disconnect(simplifio.delegate.userdata,devid);
     }
   }
   
-  static void simplifio_cb_machid_button(struct machid *machid,struct machid_device *device,int btnid,int value) {
-    int devid=machid_device_get_devid(device);
+  static void simplifio_cb_machid_button(struct machid *machid,int devid,int btnid,int value) {
     if (simplifio.delegate.cb_button) {
       simplifio.delegate.cb_button(simplifio.delegate.userdata,devid,btnid,value);
     }
@@ -258,20 +253,16 @@ static int simplifio_video_init(const struct simplifio_setup *setup) {
     if (!setup->video_driver||!strcmp(setup->video_driver,"macwm")) {
       struct macwm_delegate delegate={
         .userdata=simplifio.delegate.userdata,
-        .cb_close=simplifio.delegate.cb_close,
-        .cb_focus=simplifio.delegate.cb_focus,
-        .cb_resize=simplifio.delegate.cb_resize,
-        .cb_key=simplifio.delegate.cb_key,
-        .cb_text=simplifio.delegate.cb_text,
-        .cb_mmotion=simplifio.delegate.cb_mmotion,
-        .cb_mbutton=simplifio.delegate.cb_mbutton,
-        .cb_mwheel=simplifio.delegate.cb_mwheel,
+        .close=simplifio.delegate.cb_close,
+        .resize=simplifio.delegate.cb_resize,
+        .key=simplifio.delegate.cb_key,
+        .text=simplifio.delegate.cb_text,
+        .mmotion=simplifio.delegate.cb_mmotion,
+        .mbutton=simplifio.delegate.cb_mbutton,
+        .mwheel=simplifio.delegate.cb_mwheel,
       };
       struct macwm_setup dsetup={
         .title=setup->title,
-        .iconrgba=setup->iconrgba,
-        .iconw=setup->iconw,
-        .iconh=setup->iconh,
         .w=setup->w,
         .h=setup->h,
         .fullscreen=setup->fullscreen,
@@ -377,12 +368,11 @@ static int simplifio_audio_init(const struct simplifio_setup *setup) {
     if (!setup->audio_driver||!strcmp(setup->audio_driver,"macaudio")) {
       struct macaudio_delegate delegate={
         .userdata=simplifio.delegate.userdata,
-        .cb_pcm_out=simplifio.delegate.cb_pcm_out,
+        .pcm_out=simplifio.delegate.cb_pcm_out,
       };
       struct macaudio_setup dsetup={
         .rate=setup->audio_rate,
         .chanc=setup->audio_chanc,
-        .buffer_size=setup->audio_buffer_size,
       };
       if (!dsetup.rate) dsetup.rate=44100;
       if (!dsetup.chanc) dsetup.chanc=2;
@@ -431,9 +421,9 @@ static int simplifio_input_init(const struct simplifio_setup *setup) {
     if (!setup->input_driver||!strcmp(setup->input_driver,"machid")) {
       struct machid_delegate delegate={
         .userdata=simplifio.delegate.userdata,
-        .cb_connect=simplifio_cb_machid_connect,
-        .cb_disconnect=simplifio_cb_machid_disconnect,
-        .cb_button=simplifio_cb_machid_button,
+        .connect=simplifio_cb_machid_connect,
+        .disconnect=simplifio_cb_machid_disconnect,
+        .button=simplifio_cb_machid_button,
       };
       if (simplifio.machid=machid_new(&delegate)) return 0;
     }
@@ -485,19 +475,16 @@ int simplifio_update() {
   #if USE_alsafd
     if (simplifio.alsafd&&(alsafd_update(simplifio.alsafd)<0)) return -1;
   #endif
-  #if USE_macaudio
-    if (simplifio.macaudio&&(macaudio_update(simplifio.macaudio)<0)) return -1;
-  #endif
   #if USE_msaudio
     if (simplifio.msaudio&&(msaudio_update(simplifio.msaudio)<0)) return -1;
   #endif
-  // No update hook: asound
+  // No update hook: asound macaudio
   
   #if USE_evdev
     if (simplifio.evdev&&(evdev_update(simplifio.evdev)<0)) return -1;
   #endif
   #if USE_machid
-    if (simplifio.machid&&(machid_update(simplifio.machid)<0)) return -1;
+    if (simplifio.machid&&(machid_update(simplifio.machid,0.0)<0)) return -1;
   #endif
   #if USE_mshid
     if (simplifio.mshid&&(mshid_update(simplifio.mshid)<0)) return -1;

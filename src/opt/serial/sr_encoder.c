@@ -21,7 +21,7 @@ void sr_encoder_cleanup(struct sr_encoder *encoder) {
 int sr_encoder_require(struct sr_encoder *encoder,int addc) {
   if (addc<1) return 0;
   if (encoder->c<=encoder->a-addc) return 0;
-  if (encoder->c>INT_MAX-addc);
+  if (encoder->c>INT_MAX-addc) return -1;
   int na=encoder->c+addc;
   if (na<INT_MAX-256) na=(na+256)&~255;
   void *nv=realloc(encoder->v,na);

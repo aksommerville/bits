@@ -35,7 +35,7 @@ static int png_encode_chunk(struct png_encoder *ctx,const char chunktype[4],cons
   if (sr_encode_intbe(ctx->dst,c,4)<0) return -1;
   if (sr_encode_raw(ctx->dst,chunktype,4)<0) return -1;
   if (sr_encode_raw(ctx->dst,v,c)<0) return -1;
-  uint32_t crc=crc32(crc32(0,0,0),chunktype,4);
+  uint32_t crc=crc32(crc32(0,0,0),(Bytef*)chunktype,4);
   if (c) crc=crc32(crc,v,c); // evidently crc32() doesn't like empty input
   if (sr_encode_intbe(ctx->dst,crc,4)<0) return -1;
   return 0;
@@ -272,7 +272,7 @@ static int png_encode_IDAT(struct png_encoder *ctx) {
   if (png_encode_end_of_image(ctx)<0) return -1;
   
   int len=ctx->dst->c-lenp-8;
-  int crc=crc32(crc32(0,0,0),((char*)ctx->dst->v)+lenp+4,ctx->dst->c-lenp-4);
+  int crc=crc32(crc32(0,0,0),((Bytef*)ctx->dst->v)+lenp+4,ctx->dst->c-lenp-4);
   if (sr_encode_intbe(ctx->dst,crc,4)<0) return -1;
   uint8_t *lenv=(uint8_t*)ctx->dst->v+lenp;
   lenv[0]=len>>24;

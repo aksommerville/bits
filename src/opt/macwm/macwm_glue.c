@@ -45,7 +45,7 @@ static int _macwm_init(struct hostio_video *driver,const struct hostio_video_set
     .close=(void*)driver->delegate.cb_close,
     .resize=_macwm_cb_resize,
     .key=(void*)driver->delegate.cb_key,
-    .text=(void*)driver->delegate.cb_char,
+    .text=(void*)driver->delegate.cb_text,
     .mbutton=(void*)driver->delegate.cb_mbutton,
     .mmotion=(void*)driver->delegate.cb_mmotion,
     .mwheel=(void*)driver->delegate.cb_mwheel,
@@ -55,8 +55,6 @@ static int _macwm_init(struct hostio_video *driver,const struct hostio_video_set
     .h=config->w,
     .fullscreen=config->fullscreen,
     .title=config->title,
-    .fbw=config->fbwmax,
-    .fbh=config->fbhmax,
     .rendermode=MACWM_RENDERMODE_OPENGL,
   };
 
@@ -64,9 +62,6 @@ static int _macwm_init(struct hostio_video *driver,const struct hostio_video_set
 
   macwm_get_size(&driver->w,&driver->h,DRIVER->macwm);
   driver->fullscreen=macwm_get_fullscreen(DRIVER->macwm);
-  driver->fbw=config->fbwmax;
-  driver->fbh=config->fbhmax;
-  driver->rate=60;
   
   //driver->viewscale=NSScreen_backingScale();
   
@@ -107,12 +102,12 @@ const struct hostio_video_type hostio_video_type_macwm={
   .name="macwm",
   .desc="Window Manager interface for MacOS 10+",
   .objlen=sizeof(struct hostio_video_macwm),
-  .provides_keyboard=1,
+  .provides_input=1,
   .del=_macwm_del,
   .init=_macwm_init,
   .update=_macwm_update,
-  .begin_frame=_macwm_begin_frame,
-  .end_frame=_macwm_end_frame,
+  .gx_begin=_macwm_begin_frame,
+  .gx_end=_macwm_end_frame,
   .set_fullscreen=_macwm_set_fullscreen,
 };
 

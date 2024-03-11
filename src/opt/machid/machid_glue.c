@@ -101,5 +101,5 @@ const struct hostio_input_type hostio_input_type_machid={
   .update=_machid_update,
   .devid_by_index=_machid_devid_by_index,
   .get_ids=_machid_get_ids,
-  .list_buttons=_machid_list_buttons,
+  .for_each_button=_machid_list_buttons,
 };

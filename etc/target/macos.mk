@@ -7,9 +7,9 @@ macos_MIDDIR:=mid/macos
 macos_OUTDIR:=out/macos
 
 macos_OPT_ENABLE+=macaudio machid macos macwm \
-  rawimg bmp gif ico qoi rlead png jpeg \
+  rawimg bmp gif ico qoi rlead png \
   midi wav fs serial \
-  hostio simplifio qjs wamr http
+  hostio simplifio http
 
 macos_CC:=$(macos_TOOLCHAIN)gcc -c -MMD -O3 -Isrc -I$(macos_MIDDIR) \
   -Werror -Wimplicit -Wno-parentheses -Wno-comment \

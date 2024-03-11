@@ -1,3 +1,5 @@
+#if USE_ossmidi
+
 #include "test/test.h"
 #include "opt/ossmidi/ossmidi.h"
 #include "opt/midi/midi.h"
@@ -57,3 +59,9 @@ XXX_ITEST(ossmidi_live) {
   ossmidi_del(ossmidi);
   return 0;
 }
+
+#else
+
+int ossmidi_live() { return 0; }
+
+#endif
