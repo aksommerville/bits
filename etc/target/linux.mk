@@ -62,7 +62,7 @@ $(linux_MIDDIR)/%.o:src/%.s;$(PRECMD) $(linux_AS) -o$@ $<
 $(linux_MIDDIR)/%.o:src/%.cxx;$(PRECMD) $(linux_CXX) -o$@ $<
 $(linux_MIDDIR)/%.o:src/%.m;$(PRECMD) $(linux_OBJC) -o$@ $<
 
-linux_EXE:=$(linux_OUTDIR)/myexe
+linux_EXE:=$(linux_OUTDIR)/$(APPNAME_LOWER)
 all:$(linux_EXE)
 $(linux_EXE):$(linux_OFILES);$(PRECMD) $(linux_LD) -o$@ $(linux_OFILES) $(linux_LDPOST)
 
