@@ -1,17 +1,6 @@
 #include "hostio_internal.h"
 #include <limits.h>
 
-//XXX stubs for ones i haven't written yet
-#define STUB(t,n) const struct hostio_##t##_type hostio_##t##_type_##n={.name=#n,.objlen=sizeof(struct hostio_##t),.appointment_only=1};
-STUB(video,bcm)
-STUB(video,macwm)
-STUB(video,mswm)
-STUB(audio,macaudio)
-STUB(audio,msaudio)
-STUB(input,machid)
-STUB(input,mshid)
-#undef STUB
-
 /* Registry of types.
  */
  
@@ -54,7 +43,7 @@ static const struct hostio_video_type *hostio_video_typev[]={
 #if USE_macwm
   &hostio_video_type_macwm,
 #endif
-#if USE_mswm
+#if USE_mswin
   &hostio_video_type_mswm,
 #endif
   &hostio_video_type_dummy,
@@ -73,7 +62,7 @@ static const struct hostio_audio_type *hostio_audio_typev[]={
 #if USE_macaudio
   &hostio_audio_type_macaudio,
 #endif
-#if USE_msaudio
+#if USE_mswin
   &hostio_audio_type_msaudio,
 #endif
   &hostio_audio_type_dummy,
@@ -86,7 +75,7 @@ static const struct hostio_input_type *hostio_input_typev[]={
 #if USE_machid
   &hostio_input_type_machid,
 #endif
-#if USE_mshid
+#if USE_mswin
   &hostio_input_type_mshid,
 #endif
 };

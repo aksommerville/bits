@@ -104,7 +104,7 @@ const struct hostio_input_type hostio_input_type_mshid={
   .update=_mshid_update,
   .devid_by_index=_mshid_devid_by_index,
   .get_ids=_mshid_get_ids,
-  .list_buttons=_mshid_list_buttons,
+  .for_each_button=_mshid_list_buttons,
 };
 
 /* Device list.

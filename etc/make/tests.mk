@@ -6,15 +6,19 @@ tests_OUTDIR:=out/tests
 
 # Name here the units that should be able to build for any build host.
 # OS-specific things, declare in config.mk.
-tests_OPT_ENABLE+=bmp fs gif hostio http ico jpeg midi png qoi rawimg rlead serial simplifio wav
+tests_OPT_ENABLE+=bmp fs gif hostio ico midi png qoi rawimg rlead serial simplifio wav
 
 tests_CCINC:=-I$(WAMR_SDK)/core/iwasm/include -I$(QJS_SDK) -Isrc -I$(tests_MIDDIR)
 tests_CCDEF:=$(patsubst %,-DUSE_%=1,$(tests_OPT_ENABLE))
-tests_CC:=gcc -c -MMD -O0 -Werror -Wimplicit $(tests_CCDEF) $(tests_CCINC) $(tests_CC_EXTRA)
-tests_INT_LD:=gcc
-tests_INT_LDPOST:=-lm -lz -lpthread -ljpeg $(tests_LDPOST_EXTRA)
-tests_UNIT_LD:=gcc
+tests_CC:=$(tests_TOOLCHAIN)gcc -c -MMD -O0 -Werror -Wimplicit $(tests_CCDEF) $(tests_CCINC) $(tests_CC_EXTRA)
+tests_INT_LD:=$(tests_TOOLCHAIN)gcc $(tests_LD_EXTRA)
+tests_INT_LDPOST:=-lm -lz -lpthread $(tests_LDPOST_EXTRA)
+tests_UNIT_LD:=$(tests_TOOLCHAIN)gcc $(tests_LD_EXTRA)
 tests_UNIT_LDPOST:=-lm
+
+ifneq (,$(strip $(filter jpeg,$(tests_OPT_ENABLE))))
+  tests_INT_LDPOST+=-ljpeg
+endif
 
 tests_CFILES_COMMON:=$(filter src/test/common/%.c,$(CFILES))
 tests_OFILES_COMMON:=$(patsubst src/%.c,$(tests_MIDDIR)/%.o,$(tests_CFILES_COMMON))

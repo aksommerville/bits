@@ -207,7 +207,9 @@ static void cb_connect(struct hostio_input *driver,int devid) {
  */
 #if ENABLE_OPENGL
 
+#define GL_GLEXT_PROTOTYPES 1
 #include <GL/gl.h>
+#include <GL/glext.h>
 
 static GLuint texid=0;
 

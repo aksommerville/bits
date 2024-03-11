@@ -36,7 +36,6 @@ struct hostio_video_mswm {
   int showcursor;
   WINDOWPLACEMENT fsrestore;
   HICON appicon;
-//  struct bigpc_image *fb;//TODO
   GLuint texid;
   
   /* A stupid bug: When I switch fullscreen on or off, any held keys get forgotten or something.

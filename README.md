@@ -43,3 +43,4 @@ Things we can copy, try to keep them self-contained.
 - - [ ] mswm
 - - [ ] msaudio
 - - [ ] mshid
+- [ ] Windows: No poll(). 'http' unit depends on it.

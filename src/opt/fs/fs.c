@@ -140,7 +140,8 @@ int dir_read(
     memcpy(subpath+pathc,base,basec+1);
     
     char type=0;
-    //TODO I know some systems don't supply d_type. How to detect?
+    #if USE_mswin
+    #else
     switch (de->d_type) {
       case DT_REG: type='f'; break;
       case DT_DIR: type='d'; break;
@@ -150,6 +151,7 @@ int dir_read(
       case DT_SOCK: type='s'; break;
       default: type='?'; // do this only if d_type is provided and unknown. Zero means "not available".
     }
+    #endif
     
     int err=cb(subpath,base,type,userdata);
     if (err) {
@@ -172,13 +174,21 @@ char file_get_type(const char *path) {
   if (S_ISDIR(st.st_mode)) return 'd';
   if (S_ISCHR(st.st_mode)) return 'c';
   if (S_ISBLK(st.st_mode)) return 'b';
-  if (S_ISLNK(st.st_mode)) return 'l';
-  if (S_ISSOCK(st.st_mode)) return 's';
+  #ifdef S_ISLNK
+    if (S_ISLNK(st.st_mode)) return 'l';
+  #endif
+  #ifdef S_ISSOCK
+    if (S_ISSOCK(st.st_mode)) return 's';
+  #endif
   return '?';
 }
 
 /* mkdir and friends.
  */
+
+#if USE_mswin
+  #define mkdir(path,mode) mkdir(path)
+#endif
 
 int dir_mkdir(const char *path) {
   if (!path||!path[0]) return -1;

@@ -136,7 +136,9 @@ static void cb_mwheel(void *userdata,int dx,int dy) {
  
 #if SIMPLIFIO_LIVE_ENABLE_OPENGL
 
+#define GL_GLEXT_PROTOTYPES 1
 #include <GL/gl.h>
+#include <GL/glext.h>
 
 static GLuint texid=0;
 static void *oglfb=0;

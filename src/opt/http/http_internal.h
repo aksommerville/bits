@@ -11,10 +11,16 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <netdb.h>
 #include <errno.h>
-#include <sys/socket.h>
-#include <sys/poll.h>
+
+#if USE_mswin
+  #include <winsock2.h>
+  //TODO Our API expects poll() to exist. We'll need to rephrase with select() somehow.
+#else
+  #include <sys/poll.h>
+  #include <sys/socket.h>
+  #include <netdb.h>
+#endif
 
 /* Context.
  ************************************************************/

@@ -37,7 +37,7 @@ web_LDPOST_EXTRA:=
 
 #----------------------------------------------------------------
 
-tests_OPT_ENABLE:=alsafd asound bcm drmfb drmgx evdev glx pulse qjs wamr x11fb xinerama ossmidi
+tests_OPT_ENABLE:=alsafd asound bcm drmfb drmgx evdev glx pulse qjs wamr x11fb xinerama ossmidi http jpeg
 tests_CC_EXTRA:=-I$(WAMR_SDK)/core/iwasm/include -I$(QJS_SDK) -I/usr/include/libdrm
 tests_LDPOST_EXTRA:=-lasound -ldrm -lgbm -lEGL -lX11 -lXinerama -lGL -lpulse-simple $(WAMR_SDK)/build/libvmlib.a $(QJS_SDK)/libquickjs.a
 

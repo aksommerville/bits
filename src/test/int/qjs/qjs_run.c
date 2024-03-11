@@ -1,3 +1,5 @@
+#if USE_qjs
+
 #include "test/test.h"
 #include "opt/qjs/qjs.h"
 #include "opt/fs/fs.h"
@@ -43,3 +45,7 @@ ITEST(qjs_basic_run) {
   qjs_del(qjs);
   return 0;
 }
+
+#else
+int qjs_basic_run() { return 0; }
+#endif

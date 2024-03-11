@@ -1,3 +1,5 @@
+#if USE_wamr
+
 #include "test/test.h"
 #include "opt/wamr/wamr.h"
 #include "opt/fs/fs.h"
@@ -41,3 +43,7 @@ ITEST(wamr_basic_run) {
   wamr_del(wamr);
   return 0;
 }
+
+#else
+int wamr_basic_run() { return 0; }
+#endif

@@ -1,5 +1,4 @@
 #include "mswm_internal.h"
-#include "game/platform.h"
 
 struct hostio_video *mswm_global_driver=0;
 
@@ -66,24 +65,19 @@ static int _mswm_init(struct hostio_video *driver,const struct hostio_video_setu
   if (mswm_populate_wndclass(driver)<0) return -1;
   if (mswm_register_wndclass(driver)<0) return -1;
   
-  if (config) {
-    driver->fbw=config->fbwmax;
-    driver->fbh=config->fbhmax;
-  }
-  if (!driver->fbw||!driver->fbh) {
-    driver->fbw=320;
-    driver->fbh=192;
-  }
-  
   int w=0,h=0;
   if (config) {
-    w=config->w;
-    h=config->h;
+    if ((config->w>0)&&(config->h>0)) {
+      w=config->w;
+      h=config->h;
+    } else if ((config->fbw>0)&&(config->fbh>0)) {
+      w=config->fbw;
+      h=config->fbh;
+    }
   }
   if (!w&&!h) {
-    w=driver->fbw;
-    h=driver->fbh;
-    //while ((w<800)&&(h<400)) { w<<=1; h<<=1; }
+    w=640;
+    h=360;
   } else {
     if (w<100) w=100;
     else if (w>2000) w=2000;
@@ -189,8 +183,8 @@ static void mswm_exit_fullscreen(struct hostio_video *driver) {
     DRIVER->fsrestore.showCmd=SW_SHOW;
     DRIVER->fsrestore.rcNormalPosition.left=100;
     DRIVER->fsrestore.rcNormalPosition.top=100;
-    DRIVER->fsrestore.rcNormalPosition.right=100+(driver->fbw*2);
-    DRIVER->fsrestore.rcNormalPosition.bottom=100+(driver->fbh*2);
+    DRIVER->fsrestore.rcNormalPosition.right=100+640;
+    DRIVER->fsrestore.rcNormalPosition.bottom=100+360;
     AdjustWindowRect(&DRIVER->fsrestore.rcNormalPosition,WS_OVERLAPPEDWINDOW|WS_CLIPCHILDREN|WS_CLIPSIBLINGS,0);
   }
 
@@ -222,13 +216,14 @@ const struct hostio_video_type hostio_video_type_mswm={
   .name="mswm",
   .desc="Video for Windows",
   .objlen=sizeof(struct hostio_video_mswm),
-  .provides_keyboard=1,
+  .provides_input=1,
   .del=_mswm_del,
   .init=_mswm_init,
   .update=mswm_update,
-  .begin_frame=_mswm_begin_frame,
-  .end_frame=_mswm_end_frame,
+  .show_cursor=0,//TODO
   .set_fullscreen=_mswm_set_fullscreen,
+  .gx_begin=_mswm_begin_frame,
+  .gx_end=_mswm_end_frame,
 };
 
 /* Extra support for friend classes.

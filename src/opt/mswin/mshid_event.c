@@ -19,7 +19,7 @@ void mshid_event(int wparam,int lparam) {
 
   uint8_t buf[1024];
   UINT bufa=sizeof(buf);
-  int bufc=GetRawInputData((HRAWINPUT)lparam,RID_INPUT,buf,&bufa,sizeof(RAWINPUTHEADER));
+  int bufc=GetRawInputData((HRAWINPUT)(intptr_t)lparam,RID_INPUT,buf,&bufa,sizeof(RAWINPUTHEADER));
 
   if ((bufc<0)||(bufc>sizeof(buf))) return;
   RAWINPUT *raw=(RAWINPUT*)buf;
