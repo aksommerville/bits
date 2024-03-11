@@ -13,6 +13,7 @@ QJS_SDK:=path/to/quickjs-2023-12-09
 # Opt units, for reference:
 #   alsafd asound pulse drmfb drmgx x11fb glx evdev ossmidi bcm
 #   macaudio machid macos macwm
+#   mswin
 #   rawimg bmp gif ico qoi rlead png jpeg
 #   midi wav
 #   fs serial
@@ -48,3 +49,12 @@ macos_CC_EXTRA:=
 macos_LD_EXTRA:=
 macos_LDPOST_EXTRA:=
 macos_RUN_ARGS:=
+
+#----------------------------------------------------------------
+
+mswin_OPT_ENABLE:=
+mswin_TOOLCHAIN:=
+mswin_CC_EXTRA:=
+mswin_LD_EXTRA:=
+mswin_LDPOST_EXTRA:=
+mswin_RUN_ARGS:=
