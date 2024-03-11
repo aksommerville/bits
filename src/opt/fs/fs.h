@@ -11,6 +11,11 @@
  */
 int file_read(void *dstpp,const char *path);
 
+/* Same as file_read but operates incrementally without seeking.
+ * Beware! If you give it a character device or something, this may block forever.
+ */
+int file_read_seekless(void *dstpp,const char *path);
+
 /* Write entire regular file in one shot.
  */
 int file_write(const char *path,const void *src,int srcc);

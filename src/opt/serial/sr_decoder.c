@@ -13,7 +13,6 @@ int sr_decode_line(const char **vpp,struct sr_decoder *decoder) {
   *vpp=DECV+decoder->p;
   int linec=0;
   while (decoder->p<decoder->c) {
-    linec++;
     if (DECV[decoder->p]==0x0d) {
       linec++;
       decoder->p++;

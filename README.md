@@ -35,7 +35,7 @@ Things we can copy, try to keep them self-contained.
 - [x] wav
 - [ ] Drivers with private interfaces
 - - [x] bcm
-- - [ ] ossmidi
+- - [x] ossmidi
 - - [ ] macioc
 - - [ ] macwm
 - - [ ] macaudio

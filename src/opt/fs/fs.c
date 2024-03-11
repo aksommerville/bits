@@ -51,6 +51,42 @@ int file_read(void *dstpp,const char *path) {
   return dstc;
 }
 
+/* Read entire file without seeking.
+ */
+ 
+int file_read_seekless(void *dstpp,const char *path) {
+  if (!dstpp||!path||!path[0]) return -1;
+  int fd=open(path,O_RDONLY|O_BINARY);
+  if (fd<0) return -1;
+  int dstc=0,dsta=4096;
+  char *dst=malloc(dsta);
+  if (!dst) {
+    close(fd);
+    return -1;
+  }
+  while (1) {
+    int err=read(fd,dst+dstc,dsta-dstc);
+    if (err<=0) break;
+    dstc+=err;
+    if (dstc<dsta) break; // assume any short read signals EOF.
+    if (dsta>=0x10000000) { // safety size limit
+      free(dst);
+      close(fd);
+      return -1;
+    }
+    dsta<<=1;
+    void *nv=realloc(dst,dsta);
+    if (!nv) {
+      free(dst);
+      close(fd);
+      return -1;
+    }
+  }
+  close(fd);
+  *(void**)dstpp=dst;
+  return dstc;
+}
+
 /* Write entire file.
  */
 
