@@ -159,10 +159,10 @@ static int glx_init(struct glx *glx,const struct glx_setup *setup) {
     int monw,monh;
     glx_estimate_monitor_size(&monw,&monh,glx);
     // There's usually some fixed chrome on both the main screen and around the window.
-    // If we got a reasonable size, cut it to 7/8 to accomodate that chrome.
+    // If we got a reasonable size, cut it to 3/4 to accomodate that chrome.
     if ((monw>=256)&&(monh>=256)) {
-      monw=(monw*7)>>3;
-      monh=(monh*7)>>3;
+      monw=(monw*3)>>2;
+      monh=(monh*3)>>2;
     }
     if ((setup->fbw>0)&&(setup->fbh>0)) {
       int xscale=monw/setup->fbw;
@@ -248,8 +248,6 @@ struct glx *glx_new(
   const struct glx_delegate *delegate,
   const struct glx_setup *setup
 ) {
-  if ((setup->fbw<1)||(setup->fbh<1)) return 0;
-  
   struct glx *glx=calloc(1,sizeof(struct glx));
   if (!glx) return 0;
   

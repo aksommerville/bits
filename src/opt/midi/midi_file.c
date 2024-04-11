@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <math.h>
 
 /* Delete.
  */
@@ -138,6 +139,7 @@ static int midi_track_read_event(struct midi_event *event,struct midi_file *file
   track->status=lead;
   event->opcode=lead&0xf0;
   event->chid=lead&0x0f;
+  track->delay=-1;
   
   switch (event->opcode) {
     #define A if (track->p>track->c-1) return -1; event->a=track->v[track->p++]; 
@@ -183,7 +185,7 @@ static int midi_track_acquire_delay(struct midi_file *file,struct midi_track *tr
   if (!tickc) {
     track->delay=0;
   } else if (file->rate>0) {
-    track->delay=(int)(tickc*file->framespertick);
+    track->delay=(int)lround(tickc*file->framespertick);
     if (track->delay<1) track->delay=1;
   } else {
     track->delay=tickc;

@@ -98,6 +98,26 @@ int sr_decsint_repr(char *dst,int dsta,int v) {
   return dstc;
 }
 
+int sr_decsint64_repr(char *dst,int dsta,int64_t v) {
+  int dstc;
+  if (v<0) {
+    dstc=2;
+    int64_t limit=-10;
+    while (v<=limit) { dstc++; if (limit<INT64_MIN/10) break; limit*=10; }
+    if (dstc>dsta) return dstc;
+    int i=dstc; for (;i-->1;v/=10) dst[i]='0'-v%10;
+    dst[0]='-';
+  } else {
+    dstc=1;
+    int64_t limit=10;
+    while (v>=limit) { dstc++; if (limit>INT64_MAX/10) break; limit*=10; }
+    if (dstc>dsta) return dstc;
+    int i=dstc; for (;i-->0;v/=10) dst[i]='0'+v%10;
+  }
+  if (dstc<dsta) dst[dstc]=0;
+  return dstc;
+}
+
 int sr_decuint_repr(char *dst,int dsta,int v,int mindigitc) {
   int dstc=1;
   unsigned int limit=10;

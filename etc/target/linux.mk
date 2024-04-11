@@ -23,6 +23,9 @@ else ifneq (,$(strip $(filter drmfb,$(linux_OPT_ENABLE))))
   linux_CC+=-I/usr/include/libdrm
   linux_LDPOST+=-ldrm
 endif
+ifneq (,$(strip $(filter xegl,$(linux_OPT_ENABLE))))
+  linux_LDPOST+=-lX11 -lEGL -lGL
+endif
 ifneq (,$(strip $(filter glx,$(linux_OPT_ENABLE))))
   linux_LDPOST+=-lX11 -lGL
 else ifneq (,$(strip $(filter x11fb,$(linux_OPT_ENABLE))))

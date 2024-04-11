@@ -12,8 +12,8 @@ clean:;rm -rf mid out
 
 else
 
--include etc/config.mk
 etc/config.mk:|etc/config.mk.example;$(PRECMD) cp etc/config.mk.example $@ ; echo "Please edit $@, then rerun make" ; exit 1
+include etc/config.mk
 
 include etc/make/common.mk
 include etc/make/tools.mk

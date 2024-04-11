@@ -249,6 +249,10 @@ int qjs_link_function(struct qjs *qjs,int modid,int fnid,const char *name) {
       module->functionc--;
       return -1;
     }
+    if (!JS_IsFunction(qjs->jsctx,fnobj)) {
+      module->functionc--;
+      return -1;
+    }
     function->jsfn=fnobj;
     
     return 0;

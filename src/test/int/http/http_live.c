@@ -159,6 +159,7 @@ static int ws_server_cb_get_html(struct http_xfer *req,struct http_xfer *rsp) {
   sr_encode_raw(http_xfer_get_body(rsp),html,htmlc);
   free(html);
   http_xfer_set_header(rsp,"Content-Type",12,"text/html",9);
+  http_xfer_set_header(rsp,"Access-Control-Allow-Origin",-1,"*",1);
   http_xfer_set_status(rsp,200,"OK");
   return 0;
 }
@@ -200,6 +201,25 @@ static int ws_server_cb_serve(struct http_xfer *req,struct http_xfer *rsp,void *
   );
   return 0;
 }
+
+static int ws_server_send_random_message(struct http_context *ctx) {
+  int p=0;
+  for (;;p++) {
+    struct http_websocket *websocket=http_context_get_websocket_by_index(ctx,p);
+    if (!websocket) break;
+    const char *msg="";
+    switch (rand()%5) {
+      case 0: msg="Hello this is a random message."; break;
+      case 1: msg="This message is also random."; break;
+      case 2: msg="This is not as random as the other messages."; break;
+      case 3: msg="Congratulations, you found the hidden message."; break;
+      case 4: msg="Hi."; break;
+    }
+    int msgc=0; while (msg[msgc]) msgc++;
+    http_websocket_send(websocket,1,msg,msgc);
+  }
+  return 0;
+}
  
 XXX_ITEST(ws_server) {
   signal(SIGINT,rcvsig);
@@ -210,12 +230,17 @@ XXX_ITEST(ws_server) {
   struct http_context *ctx=http_context_new(&delegate);
   ASSERT(ctx)
   
-  int port=8080;
+  int port=8081;
   ASSERT_CALL(http_listen(ctx,1,port))
   
   fprintf(stderr,"Running on port %d. SIGINT to quit.\n",port);
+  int msgclock=0;
   while (!sigc) {
     ASSERT_CALL(http_update(ctx,1000))
+    if (++msgclock>=10) {
+      msgclock=0;
+      ws_server_send_random_message(ctx);
+    }
   }
   
   fprintf(stderr,"Normal exit.\n");

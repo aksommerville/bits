@@ -21,7 +21,7 @@ QJS_SDK:=path/to/quickjs-2023-12-09
 
 #----------------------------------------------------------------
 
-linux_OPT_ENABLE:=alsafd asound pulse drmfb drmgx glx x11fb xinerama evdev qjs wamr ossmidi
+linux_OPT_ENABLE:=alsafd asound pulse drmfb drmgx xegl glx x11fb xinerama evdev qjs wamr ossmidi
 linux_TOOLCHAIN:=
 linux_CC_EXTRA:=
 linux_LD_EXTRA:=

@@ -22,6 +22,7 @@ Things we can copy, try to keep them self-contained.
 - - `glx`
 - - `x11fb`
 - - `evdev`
+- - `ossmidi`: MIDI-In for Linux, doesn't actually use OSS.
 - `hostio`: Wraps I/O drivers with abstract types.
 - `simplifio`: Same idea but no generic driver types. More efficient and easier to understand, with some flexibility lost.
 - `midi`: Read streams and files, and a bunch of helpful constants.
@@ -33,14 +34,18 @@ Things we can copy, try to keep them self-contained.
 ## TODO
 
 - [x] wav
-- [ ] Drivers with private interfaces
+- [x] Drivers with private interfaces
 - - [x] bcm
 - - [x] ossmidi
-- - [ ] macioc
-- - [ ] macwm
-- - [ ] macaudio
-- - [ ] machid
-- - [ ] mswm
-- - [ ] msaudio
-- - [ ] mshid
+- - [x] macioc
+- - [x] macwm
+- - [x] macaudio
+- - [x] machid
+- - [x] mswm
+- - [x] msaudio
+- - [x] mshid
 - [ ] Windows: No poll(). 'http' unit depends on it.
+- [ ] Windows: Failing to link.
+- [ ] Windows: qjs, wamr, jpeg
+- [ ] MacOS: qjs, wamr, jpeg
+- [ ] MacOS: Incorporate IoC in hostio? How is this going to work?

@@ -4,6 +4,8 @@
 #ifndef SERIAL_H
 #define SERIAL_H
 
+#include <stdint.h>
+
 /* Text primitives.
  ***************************************************************/
  
@@ -26,6 +28,7 @@ int sr_int_eval(int *v,const char *src,int srcc);
 int sr_decsint_repr(char *dst,int dsta,int v);
 int sr_decuint_repr(char *dst,int dsta,int v,int mindigitc);
 int sr_hexuint_repr(char *dst,int dsta,int v,int prefix,int mindigitc);
+int sr_decsint64_repr(char *dst,int dsta,int64_t v);
 
 int sr_double_eval(double *v,const char *src,int srcc);
 int sr_double_repr(char *dst,int dsta,double v);
