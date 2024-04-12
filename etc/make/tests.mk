@@ -27,7 +27,7 @@ tests_OFILES_COMMON:=$(patsubst src/%,$(tests_MIDDIR)/%.o,$(basename $(tests_CFI
 tests_GENHEADERS:=$(tests_MIDDIR)/test/int/itest_toc.h
 
 tests_CFILES_UNIT:=$(filter src/test/unit/%,$(CFILES))
-tests_OFILES_UNIT:=$(patsubst src/%,$(tests_MIDDIR)/%.o,$(basename $(test_CFILES_UNIT)))
+tests_OFILES_UNIT:=$(patsubst src/%,$(tests_MIDDIR)/%.o,$(basename $(tests_CFILES_UNIT)))
 tests_EXES_UNIT:=$(patsubst %.o,%,$(tests_OFILES_UNIT))
 -include $(tests_OFILES_UNIT:.o=.d)
 all:$(tests_EXES_UNIT)

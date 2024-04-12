@@ -1,4 +1,4 @@
-#include "serial/sr_primitives.c"
+#include "opt/serial/sr_primitives.c"
 #include "test/test.h"
 #include <math.h>
 

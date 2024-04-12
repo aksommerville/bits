@@ -55,12 +55,13 @@ struct midi_file {
   int rate;
   int usperqnote;
   double framespertick;
+  double elapsed_ticks; // 0..1, collects roundoff error
   struct midi_track {
     const uint8_t *v;
     int c;
     int p;
     uint8_t status;
-    int delay; // Pending delay in frames, <0 if unset.
+    int delay; // Pending delay in ticks, <0 if unset.
   } *trackv;
   int trackc,tracka;
 };
@@ -118,7 +119,7 @@ extern const char *midi_gm_drum_names[128];
 #define MIDI_OPCODE_CONTROL        0xb0
 #define MIDI_OPCODE_PROGRAM        0xc0
 #define MIDI_OPCODE_PRESSURE       0xd0
-#define MIDI_OPCODE_WHEEL          0xe0
+#define MIDI_OPCODE_WHEEL          0xe0 /* (a|(b<<7))-0x2000 */
 #define MIDI_OPCODE_SYSEX_MORE     0xf0
 #define MIDI_OPCODE_SYSEX_FINAL    0xf7
 #define MIDI_OPCODE_RESET          0xff
@@ -135,6 +136,7 @@ extern const char *midi_gm_drum_names[128];
 #define MIDI_CONTROL_BALANCE_MSB    0x08
 #define MIDI_CONTROL_PAN_MSB        0x0a
 #define MIDI_CONTROL_EXPR_MSB       0x0b
+#define MIDI_CONTROL_BANK_LSB       0x20
 #define MIDI_CONTROL_SUSTAIN        0x40
 #define MIDI_CONTROL_SOUND_OFF      0x78
 #define MIDI_CONTROL_RESET          0x79
