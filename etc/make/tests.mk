@@ -20,6 +20,10 @@ tests_UNIT_LDPOST:=-lm
 ifneq (,$(strip $(filter jpeg,$(tests_OPT_ENABLE))))
   tests_INT_LDPOST+=-ljpeg
 endif
+ifneq (,$(strip $(filter curlwrap,$(tests_OPT_ENABLE))))
+  tests_INT_LDPOST+=$(CURL_SDK)/build/lib/libcurl.a -lssl -lcrypto
+  tests_CC+=-I$(CURL_SDK)/include
+endif
 
 tests_CFILES_COMMON:=$(filter src/test/common/%,$(CFILES))
 tests_OFILES_COMMON:=$(patsubst src/%,$(tests_MIDDIR)/%.o,$(basename $(tests_CFILES_COMMON)))

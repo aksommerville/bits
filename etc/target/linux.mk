@@ -51,6 +51,10 @@ ifneq (,$(strip $(filter wamr,$(linux_OPT_ENABLE))))
   linux_CC+=-I$(WAMR_SDK)/core/iwasm/include
   linux_LDPOST+=$(WAMR_SDK)/build/libvmlib.a
 endif
+ifneq (,$(strip $(filter curlwrap,$(linux_OPT_ENABLE))))
+  linux_LDPOST+=$(CURL_SDK)/build/lib/libcurl.a -lssl -lcrypto
+  linux_CC+=-I$(CURL_SDK)/include
+endif
 
 linux_CFILES:=$(filter \
   src/main/% \

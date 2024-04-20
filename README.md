@@ -30,6 +30,7 @@ Things we can copy, try to keep them self-contained.
 - `qjs`: QuickJS adapter.
 - `wamr`: wasm-micro-runtime adapter.
 - `http`: HTTP+WebSocket client and server, for dev tooling. Don't use on the public internet.
+- `curlwrap`: Wrapper around libcurl for HTTP and (experimental) WebSocket. Safe for real-world use.
 
 ## TODO
 
