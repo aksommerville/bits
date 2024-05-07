@@ -76,6 +76,7 @@ int qjs_check_js_exception(struct qjs *qjs,JSValue v) {
     JS_FreeCString(qjs->jsctx,reprd);
   }
   JS_FreeValue(qjs->jsctx,exception);
+  JS_FreeValue(qjs->jsctx,stack);
   return -2;
 }
 
@@ -147,6 +148,25 @@ struct qjs *qjs_new() {
   JS_FreeValue(qjs->jsctx,globals);
   
   return qjs;
+}
+
+/* Maintenance.
+ */
+ 
+int qjs_update(struct qjs *qjs) {
+  if (JS_IsJobPending(qjs->jsrt)) {
+    JSContext *ctx=0;
+    int err=JS_ExecutePendingJob(qjs->jsrt,&ctx);
+  }
+  return 0;
+}
+
+/* Trivial accessors.
+ */
+ 
+void *qjs_get_context(struct qjs *qjs) {
+  if (!qjs) return 0;
+  return qjs->jsctx;
 }
 
 /* Set exports.
@@ -334,6 +354,7 @@ int qjs_callf(struct qjs *qjs,int modid,int fnid,const char *fmt,...) {
           if (!src) len=0; else if (len<0) { len=0; while (src[len]) len++; }
           *dst=JS_NewStringLen(qjs->jsctx,src,len);
         } break;
+      case 'o': *dst=JS_DupValue(qjs->jsctx,*va_arg(vargs,JSValue*)); break;
       default: {
           while (argc-->0) JS_FreeValue(qjs->jsctx,qjs->tmpv[argc]);
           return -1;

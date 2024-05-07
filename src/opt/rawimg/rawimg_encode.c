@@ -117,6 +117,20 @@ static struct rawimg *rawimg_decode_rawimg(const uint8_t *src,int srcc) {
   return rawimg;
 }
 
+static const char *rawimg_decode_header_rawimg(int *w,int *h,int *stride,int *pixelsize,const uint8_t *src,int srcc) {
+  if (srcc<32) return 0;
+  if (memcmp(src,"\x00raw",4)) return 0;
+  int ww=(src[4]<<8)|src[5];
+  int hh=(src[6]<<8)|src[7];
+  int px=src[0x1d];
+  if ((ww<1)||(ww>0x7fff)||(hh<1)||(hh>0x7fff)||(px<1)||(px>64)) return 0;
+  if (w) *w=ww;
+  if (h) *h=hh;
+  if (stride) *stride=(ww*px+7)>>3;
+  if (pixelsize) *pixelsize=px;
+  return "rawimg";
+}
+
 /* PNG
  **************************************************************************/
  
@@ -338,6 +352,33 @@ static struct rawimg *rawimg_decode_png(const uint8_t *src,int srcc) {
   return rawimg;
 }
 
+static const char *rawimg_decode_header_png(int *w,int *h,int *stride,int *pixelsize,const uint8_t *src,int srcc) {
+  // Require the image to start with a 13-byte IHDR.
+  // Spec says it must. Our decoder is not strict about it, but whatever.
+  if ((srcc<26)||memcmp(src,"\x89PNG\r\n\x1a\n\0\0\0\x0dIHDR",16)) return 0;
+  int ww=(src[16]<<24)|(src[17]<<16)|(src[18]<<8)|src[19];
+  int hh=(src[20]<<24)|(src[21]<<16)|(src[22]<<8)|src[23];
+  if ((ww<1)||(ww>0x7fff)||(hh<1)||(hh>0x7fff)) return 0;
+  if (*w) *w=ww;
+  if (*h) *h=hh;
+  if (stride||pixelsize) {
+    int depth=src[24];
+    int colortype=src[25];
+    switch (colortype) {
+      case 0: break;
+      case 2: depth*=3; break;
+      case 3: break;
+      case 4: depth*=2; break;
+      case 6: depth*=4; break;
+      default: return 0;
+    }
+    if ((depth<1)||(depth>64)) return 0;
+    if (pixelsize) *pixelsize=depth;
+    if (stride) *stride=(ww*depth+7)>>3;
+  }
+  return "png";
+}
+
 #endif
 
 /* ico
@@ -391,8 +432,6 @@ static struct rawimg *rawimg_decode_ico(const uint8_t *src,int srcc) {
   }
   image->v=0; // handed off
   
-  //TODO !!! Need color table.
-  
   if (image->pixelsize==32) {
     memcpy(rawimg->chorder,"RGBA",4);
     uint8_t __attribute__((aligned(4))) layout[4]={0xff,0x00,0x00,0x00};
@@ -401,11 +440,47 @@ static struct rawimg *rawimg_decode_ico(const uint8_t *src,int srcc) {
     rawimg->bmask=(rawimg->rmask>>16)|(rawimg->rmask<<16);
     rawimg->amask=(rawimg->rmask>>24)|(rawimg->rmask<<24);
   } else {
-    // TODO Need ico to pass along more details from underlying PNG and BMP, so we can populate format.
+    // Decoded ico images will always be 32-bit RGBA.
+    ico_file_del(file);
+    rawimg_del(rawimg);
+    return 0;
   }
 
   ico_file_del(file);
   return rawimg;
+}
+
+static const char *rawimg_decode_header_ico(int *w,int *h,int *stride,int *pixelsize,const uint8_t *src,int srcc) {
+  // Like bmp and jpeg, we'll decode the whole thing just to extract its header.
+  // In this case though, it's not unreasonable. Decoding a file only marks the inner images, doesn't decode them yet.
+  struct ico_file *file=ico_decode(src,srcc);
+  if (!file) return 0;
+  // General ico decode returns the largest image, so we'll do the same.
+  const struct ico_image *image=0;
+  const struct ico_image *q=file->imagev;
+  int i=file->imagec;
+  for (;i-->0;q++) {
+    if (!image) {
+      image=q;
+    } else {
+      int imagec=image->w*image->h;
+      int qc=q->w*q->h;
+      if (qc>imagec) image=q;
+    }
+  }
+  if (!image) {
+    ico_file_del(file);
+    return 0;
+  }
+  if (w) *w=image->w;
+  if (h) *h=image->h;
+  if (pixelsize) *pixelsize=image->pixelsize;
+  // (image->stride) is absent until decode.
+  // We'll take the minimum and bump it up to 32 bits.
+  // That is what BMP ICO does, and for PNG we might come up larger here, which should be safe.
+  if (stride) *stride=((image->w*image->pixelsize+31)&~31)>>3;
+  ico_file_del(file);
+  return "ico";
 }
 
 #endif
@@ -462,6 +537,19 @@ static struct rawimg *rawimg_decode_qoi(const uint8_t *src,int srcc) {
   return rawimg;
 }
 
+static const char *rawimg_decode_header_qoi(int *w,int *h,int *stride,int *pixelsize,const uint8_t *src,int srcc) {
+  if (srcc<12) return 0;
+  if (memcmp(src,"qoif",4)) return 0;
+  int ww=(src[4]<<24)|(src[5]<<16)|(src[6]<<8)|src[7];
+  int hh=(src[8]<<24)|(src[9]<<16)|(src[10]<<8)|src[11];
+  if ((ww<1)||(ww>0x7fff)||(hh<1)||(hh>0x7fff)) return 0; // QOI allows 31-bit dimensions but we reject >15 everywhere.
+  if (w) *w=ww;
+  if (h) *h=hh;
+  if (stride) *stride=ww<<2;
+  if (pixelsize) *pixelsize=32;
+  return "qoi";
+}
+
 #endif
 
 /* rlead
@@ -471,7 +559,7 @@ static struct rawimg *rawimg_decode_qoi(const uint8_t *src,int srcc) {
 
 #include "opt/rlead/rlead.h"
 
-static int rawimg_encode_rlead(struct sr_encoder *encoder,const struct rawimg *rawimg) {
+static int rawimg_encode_rlead(struct sr_encoder *encoder,const struct rawimg *rawimg,int alpha) {
   struct rawimg *killme=0;
   if (rawimg_is_y1(rawimg)<2) {
     if (!(killme=rawimg_new_copy(rawimg))) return -1;
@@ -486,6 +574,7 @@ static int rawimg_encode_rlead(struct sr_encoder *encoder,const struct rawimg *r
     .w=rawimg->w,
     .h=rawimg->h,
     .stride=rawimg->stride,
+    .alpha=alpha,
   };
   int err=rlead_encode(encoder,&rlead);
   rawimg_del(killme);
@@ -501,11 +590,29 @@ static struct rawimg *rawimg_decode_rlead(const uint8_t *src,int srcc) {
     return 0;
   }
   rlead->v=0; // handed off
+  if (rlead->alpha) {
+    rawimg->rmask=rawimg->gmask=rawimg->bmask=0;
+    rawimg->amask=1;
+    rawimg->chorder[0]='A';
+  }
   rlead_image_del(rlead);
   
   rawimg->bitorder='>';
   
   return rawimg;
+}
+
+static const char *rawimg_decode_header_rlead(int *w,int *h,int *stride,int *pixelsize,const uint8_t *src,int srcc) {
+  if (srcc<6) return 0;
+  if ((src[0]!=0xbb)||(src[1]!=0xad)) return 0;
+  int ww=(src[2]<<8)|src[3];
+  int hh=(src[4]<<8)|src[5];
+  if ((ww<1)||(ww>0x7fff)||(hh<1)||(hh>0x7fff)) return 0;
+  if (w) *w=ww;
+  if (h) *h=hh;
+  if (stride) *stride=(ww+7)>>3;
+  if (pixelsize) *pixelsize=1;
+  return "rlead";
 }
 
 #endif
@@ -558,6 +665,18 @@ static struct rawimg *rawimg_decode_jpeg(const uint8_t *src,int srcc) {
   }
   jpeg_image_del(jpeg);
   return rawimg;
+}
+
+static const char *rawimg_decode_header_jpeg(int *w,int *h,int *stride,int *pixelsize,const uint8_t *src,int srcc) {
+  // TODO Read just the header, can we add that to the jpeg unit?
+  struct jpeg_image *image=jpeg_decode(src,srcc);
+  if (!image) return 0;
+  if (w) *w=image->w;
+  if (h) *h=image->h;
+  if (stride) *stride=image->stride;
+  if (pixelsize) *pixelsize=image->chanc<<3;
+  jpeg_image_del(image);
+  return "jpeg";
 }
 
 #endif
@@ -654,6 +773,19 @@ static struct rawimg *rawimg_decode_bmp(const uint8_t *src,int srcc) {
   return rawimg;
 }
 
+static const char *rawimg_decode_header_bmp(int *w,int *h,int *stride,int *pixelsize,const uint8_t *src,int srcc) {
+  // BMP is much more complex than most formats, so we won't fake it here.
+  // Actually decode the whole thing.
+  struct bmp_image *image=bmp_decode(src,srcc);
+  if (!image) return 0;
+  if (w) *w=image->w;
+  if (h) *h=image->h;
+  if (stride) *stride=image->stride;
+  if (pixelsize) *pixelsize=image->pixelsize;
+  bmp_image_del(image);
+  return "bmp";
+}
+
 #endif
 
 /* GIF
@@ -705,6 +837,21 @@ static struct rawimg *rawimg_decode_gif(const uint8_t *src,int srcc) {
   return rawimg;
 }
 
+static const char *rawimg_decode_header_gif(int *w,int *h,int *stride,int *pixelsize,const uint8_t *src,int srcc) {
+  // 6-byte signature, then u16le w, u16le h
+  if (srcc<10) return 0;
+  if (memcmp(src,"GIF",3)) return 0; // "87a", "89a", or something else, we don't care.
+  int ww=src[6]|(src[7]<<8);
+  int hh=src[8]|(src[9]<<8);
+  if ((ww<1)||(hh<1)) return 0;
+  if (w) *w=ww;
+  if (h) *h=hh;
+  // Our GIF decoder always promotes to RGBA.
+  if (stride) *stride=ww<<2;
+  if (pixelsize) *pixelsize=32;
+  return "gif";
+}
+
 #endif
 
 /* Format detection and dispatch.
@@ -724,7 +871,8 @@ int rawimg_encode(struct sr_encoder *encoder,const struct rawimg *rawimg) {
     if (!strcmp(rawimg->encfmt,"qoi")) return rawimg_encode_qoi(encoder,rawimg);
   #endif
   #if USE_rlead
-    if (!strcmp(rawimg->encfmt,"rlead")) return rawimg_encode_rlead(encoder,rawimg);
+    if (!strcmp(rawimg->encfmt,"rleadalpha")) return rawimg_encode_rlead(encoder,rawimg,1);
+    if (!strcmp(rawimg->encfmt,"rlead")) return rawimg_encode_rlead(encoder,rawimg,0);
   #endif
   #if USE_jpeg
     if (!strcmp(rawimg->encfmt,"jpeg")) return rawimg_encode_jpeg(encoder,rawimg);
@@ -763,6 +911,35 @@ struct rawimg *rawimg_decode(const void *src,int srcc) {
   #endif
   #if USE_gif
     if (!strcmp(encfmt,"gif")) return rawimg_decode_gif(src,srcc);
+  #endif
+  return 0;
+}
+
+const char *rawimg_decode_header(int *w,int *h,int *stride,int *pixelsize,const void *src,int srcc) {
+  if (!src) return 0;
+  const char *encfmt=rawimg_detect_format(src,srcc);
+  if (!encfmt) return 0;
+  if (!strcmp(encfmt,"rawimg")) return rawimg_decode_header_rawimg(w,h,stride,pixelsize,src,srcc);
+  #if USE_png
+    if (!strcmp(encfmt,"png")) return rawimg_decode_header_png(w,h,stride,pixelsize,src,srcc);
+  #endif
+  #if USE_ico
+    if (!strcmp(encfmt,"ico")) return rawimg_decode_header_ico(w,h,stride,pixelsize,src,srcc);
+  #endif
+  #if USE_qoi
+    if (!strcmp(encfmt,"qoi")) return rawimg_decode_header_qoi(w,h,stride,pixelsize,src,srcc);
+  #endif
+  #if USE_rlead
+    if (!strcmp(encfmt,"rlead")) return rawimg_decode_header_rlead(w,h,stride,pixelsize,src,srcc);
+  #endif
+  #if USE_jpeg
+    if (!strcmp(encfmt,"jpeg")) return rawimg_decode_header_jpeg(w,h,stride,pixelsize,src,srcc);
+  #endif
+  #if USE_bmp
+    if (!strcmp(encfmt,"bmp")) return rawimg_decode_header_bmp(w,h,stride,pixelsize,src,srcc);
+  #endif
+  #if USE_gif
+    if (!strcmp(encfmt,"gif")) return rawimg_decode_header_gif(w,h,stride,pixelsize,src,srcc);
   #endif
   return 0;
 }
