@@ -26,6 +26,7 @@ struct hostio_video {
   struct hostio_video_delegate delegate;
   int w,h,fullscreen;
   int cursor_visible;
+  int cursor_locked;
 };
 
 struct hostio_video_setup {
@@ -38,20 +39,6 @@ struct hostio_video_setup {
   const char *device;
 };
 
-struct hostio_video_fb_description {
-  int w,h; // pixels
-  int stride; // bytes
-  int pixelsize; // bits
-  
-  // Masks are relevant if a pixel is read as native words. pixelsize 8, 16, 32 only.
-  // It is recommended to declare both masks and chorder, if possible.
-  int rmask,gmask,bmask,amask;
-  
-  // 8-bit channels but not necessarily neat words (eg 24-bit RGB) can use chorder instead.
-  // Should contain "rgbyax" in the order stored, NULs at the end as placeholders.
-  char chorder[4];
-};
-
 struct hostio_video_type {
   const char *name;
   const char *desc;
@@ -62,18 +49,15 @@ struct hostio_video_type {
   int (*init)(struct hostio_video *driver,const struct hostio_video_setup *setup);
   int (*update)(struct hostio_video *driver);
   void (*show_cursor)(struct hostio_video *driver,int show);
+  
+  // "locked" cursor is implicitly hidden, and reports relative motion only.
+  void (*lock_cursor)(struct hostio_video *driver,int lock);
+  
   void (*set_fullscreen)(struct hostio_video *driver,int fullscreen);
   void (*suppress_screensaver)(struct hostio_video *driver);
   
   int (*gx_begin)(struct hostio_video *driver);
   int (*gx_end)(struct hostio_video *driver);
-  
-  /* Framebuffer description must not change after being reported the first time.
-   * Driver should make every reasonable attempt to allocate the size requested at init.
-   */
-  int (*fb_describe)(struct hostio_video_fb_description *desc,struct hostio_video *driver);
-  void *(*fb_begin)(struct hostio_video *driver);
-  int (*fb_end)(struct hostio_video *driver);
 };
 
 void hostio_video_del(struct hostio_video *driver);

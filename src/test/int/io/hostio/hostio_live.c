@@ -4,6 +4,8 @@
  * Dump some test content to screen and speaker, and log all events.
  * Intended for troubleshooting drivers.
  */
+ 
+#if 0 /* XXX 2025-08-27: I guess this was written against an older version of hostio? I forget. */
 
 #include "test/test.h"
 #include "opt/hostio/hostio.h"
@@ -229,7 +231,6 @@ static int opengl_init() {
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
-  
   fbdesc.w=GLFB_W;
   fbdesc.h=GLFB_H;
   fbdesc.stride=GLFB_W<<2;
@@ -431,7 +432,7 @@ static void reformat_or_kill_spritebits() {
  * This should always be "XXX_ITEST"; we're interactive so it's appointment-only.
  */
  
-XXX_ITEST(hostio_live) {
+XXX_ITEST_XXX(hostio_live) {
   fprintf(stderr,"%s...\n",__func__);
   
   signal(SIGINT,cb_signal);
@@ -552,3 +553,5 @@ XXX_ITEST(hostio_live) {
   fprintf(stderr,"%s normal exit.\n",__func__);
   return 0;
 }
+
+#endif

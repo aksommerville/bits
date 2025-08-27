@@ -186,7 +186,7 @@ static int xegl_init(struct xegl *xegl,const struct xegl_setup *setup) {
     0,
   };
   if (xegl->delegate.cb_mmotion) {
-    wattr.event_mask|=PointerMotionMask;
+    wattr.event_mask|=PointerMotionMask|EnterWindowMask|LeaveWindowMask;
   }
   if (xegl->delegate.cb_mbutton||xegl->delegate.cb_mwheel) {
     wattr.event_mask|=ButtonPressMask|ButtonReleaseMask;
@@ -294,6 +294,20 @@ void xegl_show_cursor(struct xegl *xegl,int show) {
     XFreeCursor(xegl->dpy,cursor);
     XFreePixmap(xegl->dpy,pixmap);
     xegl->cursor_visible=0;
+  }
+}
+
+/* Lock/unlock cursor.
+ */
+ 
+void xegl_lock_cursor(struct xegl *xegl,int lock) {
+  if (lock) {
+    if (xegl->cursor_locked) return;
+    xegl->cursor_locked=1;
+    xegl_show_cursor(xegl,0);
+  } else {
+    if (!xegl->cursor_locked) return;
+    xegl->cursor_locked=0;
   }
 }
 

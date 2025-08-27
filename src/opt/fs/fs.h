@@ -42,6 +42,8 @@ int dir_read(
  */
 char file_get_type(const char *path);
 
+int file_get_mtime(const char *path);
+
 /* Make a directory.
  * dir_mkdirp creates parent directories recursively, and does not report an error if already existing.
  * dir_mkdirp_parent is a convenience that splits the path and runs dir_mkdirp only on the directory portion.
@@ -49,6 +51,12 @@ char file_get_type(const char *path);
 int dir_mkdir(const char *path);
 int dir_mkdirp(const char *path);
 int dir_mkdirp_parent(const char *path);
+
+/* Delete directory and all of its content recursively, or delete a regular file.
+ * No error if it already doesn't exist.
+ * Equivalent to `rm -rf path`
+ */
+int dir_rmrf(const char *path);
 
 /* Index of the last significant separator in (path).
  * ie length of the dirname, or (path+n+1) for the basename.
@@ -60,5 +68,10 @@ int path_split(const char *path,int pathc);
 int path_join(char *dst,int dsta,const char *a,int ac,const char *b,int bc);
 
 extern const char path_separator;
+
+/* Resolve leading tilde and working directory.
+ * This is a syntatic operation: We don't care whether the file actually exists.
+ */
+int path_resolve(char *dst,int dsta,const char *src,int srcc);
 
 #endif

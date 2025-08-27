@@ -408,8 +408,9 @@ static int curlwrap_http_init(
   if (curl_easy_setopt(easy,CURLOPT_PRIVATE,http)<0) return -1;
   if (curl_easy_setopt(easy,CURLOPT_SSL_VERIFYHOST,2)<0) return -1;
   if (curl_easy_setopt(easy,CURLOPT_SSL_VERIFYPEER,1)<0) return -1;
-  if (curl_easy_setopt(easy,CURLOPT_PROTOCOLS,CURLPROTO_HTTP|CURLPROTO_HTTPS)<0) return -1;
-  if (curl_easy_setopt(easy,CURLOPT_REDIR_PROTOCOLS,CURLPROTO_HTTP|CURLPROTO_HTTPS)<0) return -1;
+  //TODO deprecated
+  //if (curl_easy_setopt(easy,CURLOPT_PROTOCOLS,CURLPROTO_HTTP|CURLPROTO_HTTPS)<0) return -1;
+  //if (curl_easy_setopt(easy,CURLOPT_REDIR_PROTOCOLS,CURLPROTO_HTTP|CURLPROTO_HTTPS)<0) return -1;
   if (curl_easy_setopt(easy,CURLOPT_FOLLOWLOCATION,1)<0) return -1;
   if (curl_easy_setopt(easy,CURLOPT_HEADERFUNCTION,curlwrap_cb_http_rspheader)<0) return -1;
   if (curl_easy_setopt(easy,CURLOPT_HEADERDATA,http)<0) return -1;
@@ -517,8 +518,9 @@ static int curlwrap_ws_init(
   if (curl_easy_setopt(easy,CURLOPT_PRIVATE,ws)<0) return -1;
   if (curl_easy_setopt(easy,CURLOPT_SSL_VERIFYHOST,2)<0) return -1;
   if (curl_easy_setopt(easy,CURLOPT_SSL_VERIFYPEER,1)<0) return -1;
-  if (curl_easy_setopt(easy,CURLOPT_PROTOCOLS,CURLPROTO_ALL)<0) return -1;
-  if (curl_easy_setopt(easy,CURLOPT_REDIR_PROTOCOLS,CURLPROTO_ALL)<0) return -1;
+  //TODO deprecated
+  //if (curl_easy_setopt(easy,CURLOPT_PROTOCOLS,CURLPROTO_ALL)<0) return -1;
+  //if (curl_easy_setopt(easy,CURLOPT_REDIR_PROTOCOLS,CURLPROTO_ALL)<0) return -1;
   if (curl_easy_setopt(easy,CURLOPT_FOLLOWLOCATION,1)<0) return -1;
   if (curl_easy_setopt(easy,CURLOPT_HEADERFUNCTION,curlwrap_cb_ws_rspheader)<0) return -1;
   if (curl_easy_setopt(easy,CURLOPT_HEADERDATA,ws)<0) return -1;

@@ -213,7 +213,6 @@ struct bmp_image *bmp_decode(const void *src,int srcc) {
   
   // https://en.wikipedia.org/wiki/BMP_file_format
   int err=-1;
-  fprintf(stderr,"bmp hdrlen %d\n",hdrlen);
   switch (hdrlen) {
     case 12: err=bmp_decode_BITMAPCOREHEADER(image,SRC+srcp,hdrlen); break;
     case 64: err=bmp_decode_OS22XBITMAPHEADER(image,SRC+srcp,hdrlen); break;
@@ -224,7 +223,7 @@ struct bmp_image *bmp_decode(const void *src,int srcc) {
     case 108: err=bmp_decode_BITMAPV4HEADER(image,SRC+srcp,hdrlen); break;
     case 124: err=bmp_decode_BITMAPV5HEADER(image,SRC+srcp,hdrlen); break;
   }
-  if (err<0) {
+  if ((err<0)||(image->w<1)||!image->h) {
     bmp_image_del(image);
     return 0;
   }
@@ -266,8 +265,7 @@ struct bmp_image *bmp_decode(const void *src,int srcc) {
    * Per Wikipedia, it's more complicated than following the stated (ctabc). Because of course it bloody is.
    * I'm going to assume that (ctabc) is always set correctly.
    */
-  fprintf(stderr,"bmp ctabc %d\n",image->ctabc);
-  image->h>>=1;// need this for ico.... what the hell? figure this out
+  //image->h>>=1;// need this for ico.... what the hell? figure this out
   if (image->ctabc) {
     int ctablen=image->ctabc<<2;
     if (srcp>srcc-ctablen) {

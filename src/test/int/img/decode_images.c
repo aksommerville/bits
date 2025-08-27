@@ -26,7 +26,7 @@
 #define PRINT_MISMATCH_COMPARISONS 0
 
 // Dump all outcomes, and encoded sizes where successful.
-#define PRINT_BIG_REPORT 0
+#define PRINT_BIG_REPORT 1
 
 // Instead of encoded sizes, print ratio to original input file size.
 #define PRINT_RELATIVE_SIZES 0
@@ -199,9 +199,11 @@ static int di_compare_images(
     const uint8_t *arow=a->v;
     const uint8_t *brow=b->v;
     int cmpc=(a->stride<b->stride)?a->stride:b->stride;
-    int yi=a->h;
-    for (;yi-->0;arow+=a->stride,brow+=b->stride) {
-      if (memcmp(arow,brow,cmpc)) return 0;
+    int yi=a->h,y=0;
+    for (;yi-->0;arow+=a->stride,brow+=b->stride,y++) {
+      if (memcmp(arow,brow,cmpc)) {
+        return 0;
+      }
     }
     return 1;
   }
@@ -389,6 +391,9 @@ static int di_report_results(struct di *di) {
   fprintf(stderr,"%.*s\n",bufc,buf);
   bufc=0;
   
+  int totals[128]={0};
+  int totalsp=0;
+  
   const char *curpath=0;
   const struct di_result *result=di->resultv;
   for (i=di->resultc;i-->0;result++) {
@@ -398,24 +403,32 @@ static int di_report_results(struct di *di) {
       if (bufc) fprintf(stderr,"%.*s\n",bufc,buf);
       bufc=snprintf(buf,sizeof(buf),"%*s",filecolw,base);
       curpath=result->path;
+      totalsp=0;
     }
   
     if (result->serialc<0) {
       bufc+=snprintf(buf+bufc,sizeof(buf)-bufc,"%*s",resultcolw,"xxxxxxxx");
     } else if (result->match>=3) {
+      totals[totalsp]+=result->serialc;
       if (PRINT_RELATIVE_SIZES) {
         bufc+=snprintf(buf+bufc,sizeof(buf)-bufc,"%*.3f",resultcolw,(double)result->serialc/(double)result->original_serialc);
       } else {
         bufc+=snprintf(buf+bufc,sizeof(buf)-bufc,"%*d",resultcolw,result->serialc);
       }
     } else if (result->match==2) {
+      totals[totalsp]+=result->serialc;
       bufc+=snprintf(buf+bufc,sizeof(buf)-bufc,"%*s",resultcolw,"mismatch");
     } else {
       bufc+=snprintf(buf+bufc,sizeof(buf)-bufc,"%*s",resultcolw,"error");
     }
+    totalsp++;
     
   }
   if (bufc) fprintf(stderr,"%.*s\n",bufc,buf);
+  
+  fprintf(stderr,"%.*s",filecolw,"                                                                        ");
+  for (i=0;i<di->fmtc;i++) fprintf(stderr,"%*d",resultcolw,totals[i]);
+  fprintf(stderr,"\n");
   
   fprintf(stderr,"=== end of decode_images report ===\n");
   return 0;
@@ -476,11 +489,21 @@ static int di_cb_testfiles_top(const char *path,const char *base,char type,void 
 /* Gather requirements.
  */
  
+static int di_skip_format(const char *fmt) {
+  return 0;
+  // rawimg png ico qoi rlead jpeg bmp gif
+  if (!strcmp(fmt,"rawimg")) return 0;
+  if (!strcmp(fmt,"png")) return 0;
+  if (!strcmp(fmt,"gif")) return 0;
+  return 1;
+}
+ 
 static int di_gather_requirements(struct di *di) {
   int p=0,err;
   for (;;p++) {
     const char *fmt=rawimg_supported_format_by_index(p);
     if (!fmt||!fmt[0]) break;
+    if (di_skip_format(fmt)) continue;
     if (di->fmtc>=di->fmta) {
       int na=di->fmta+16;
       if (na>INT_MAX/sizeof(void*)) return -1;

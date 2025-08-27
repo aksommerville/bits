@@ -6,6 +6,43 @@
 #include <stdio.h>
 #include <zlib.h>
 
+/* Quickie decode, header only.
+ */
+ 
+int png_decode_header(struct png_image *dst,const void *src,int srcc) {
+  if (!src) return -1;
+  if ((srcc<26)||memcmp(src,"\x89PNG\r\n\x1a\n\0\0\0\x0dIHDR",16)) return -1; // sic <26; confirm we have the first 10 bytes of IHDR too.
+  const uint8_t *SRC=src;
+  SRC+=16;
+  int w=(SRC[0]<<24)|(SRC[1]<<16)|(SRC[2]<<8)|SRC[3];
+  int h=(SRC[4]<<24)|(SRC[5]<<16)|(SRC[6]<<8)|SRC[7];
+  int depth=SRC[8];
+  int colortype=SRC[9];
+  if ((w<1)||(w>0x7fff)||(h<1)||(h>0x7fff)) return -1;
+  int pixelsize=depth;
+  switch (colortype) {
+    case 0: break;
+    case 2: pixelsize*=3; break;
+    case 3: break;
+    case 4: pixelsize*=2; break;
+    case 6: pixelsize*=4; break;
+    default: return -1;
+  }
+  switch (pixelsize) {
+    case 1: case 2: case 4: case 8:
+    case 16: case 24: case 32: case 48: case 64:
+      break;
+    default: return -1;
+  }
+  dst->w=w;
+  dst->h=h;
+  dst->depth=depth;
+  dst->colortype=colortype;
+  dst->pixelsize=pixelsize;
+  dst->stride=(w*pixelsize+7)>>3;
+  return 0;
+}
+
 /* Decoder context.
  */
  

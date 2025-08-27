@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <stdio.h>
 
 /* Abstract functions for reading plain integers from a packed row.
  * This is an inefficient way to go about it, but the alternative is a ton of highly specific this-to-that converters.
@@ -163,31 +164,31 @@ static void png_rgbawr_rgb16(uint8_t *dst,int x,struct png_rgba v) {
 }
 
 static struct png_rgba png_rgbard_ya8(const uint8_t *src,int x) {
-  x<<=1;
+  src+=x<<1;
   return (struct png_rgba){src[0],src[0],src[0],src[1]};
 }
 static void png_rgbawr_ya8(uint8_t *dst,int x,struct png_rgba v) {
-  x<<=1;
+  dst+=x<<1;
   dst[0]=(v.r+v.g+v.b)/3;
   dst[1]=v.a;
 }
 
 static struct png_rgba png_rgbard_ya16(const uint8_t *src,int x) {
-  x<<=2;
+  src+=x<<2;
   return (struct png_rgba){src[0],src[0],src[0],src[2]};
 }
 static void png_rgbawr_ya16(uint8_t *dst,int x,struct png_rgba v) {
-  x<<=2;
+  dst+=x<<2;
   dst[0]=dst[1]=(v.r+v.g+v.b)/3;
   dst[2]=dst[3]=v.a;
 }
 
 static struct png_rgba png_rgbard_rgba8(const uint8_t *src,int x) {
-  x<<=2;
+  src+=x<<2;
   return (struct png_rgba){src[0],src[1],src[2],src[3]};
 }
 static void png_rgbawr_rgba8(uint8_t *dst,int x,struct png_rgba v) {
-  x<<=2;
+  dst+=x<<2;
   dst[0]=v.r;
   dst[1]=v.g;
   dst[2]=v.b;
@@ -195,11 +196,11 @@ static void png_rgbawr_rgba8(uint8_t *dst,int x,struct png_rgba v) {
 }
 
 static struct png_rgba png_rgbard_rgba16(const uint8_t *src,int x) {
-  x<<=3;
+  src+=x<<3;
   return (struct png_rgba){src[0],src[2],src[4],src[6]};
 }
 static void png_rgbawr_rgba16(uint8_t *dst,int x,struct png_rgba v) {
-  x<<=3;
+  dst+=x<<3;
   dst[0]=dst[1]=v.r;
   dst[2]=dst[3]=v.g;
   dst[4]=dst[5]=v.b;
@@ -306,6 +307,11 @@ int png_image_reformat(struct png_image *image,int depth,int colortype) {
   const uint8_t *srcrow=image->v;
   uint8_t *dstrow=nv;
   int yi=image->h;
+  
+  //XXX
+  if ((image->depth==8)&&(image->colortype==2)&&(depth==8)&&(colortype==6)) {
+    fprintf(stderr,"%s RGB=>RGBA %dx%d\n",__func__,image->w,image->h);
+  }
   
   // Format didn't change, do rowwise memcpy.
   if ((depth==image->depth)&&(colortype==image->colortype)) {

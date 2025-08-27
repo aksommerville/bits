@@ -46,7 +46,7 @@ static int _x11fb_init(struct hostio_video *driver,const struct hostio_video_set
 }
 
 /* Describe framebuffer.
- */
+ *
  
 static int _x11fb_fb_describe(struct hostio_video_fb_description *desc,struct hostio_video *driver) {
   x11fb_get_framebuffer_geometry(&desc->w,&desc->h,&desc->stride,&desc->pixelsize,DRIVER->x11fb);
@@ -54,6 +54,7 @@ static int _x11fb_fb_describe(struct hostio_video_fb_description *desc,struct ho
   x11fb_get_framebuffer_chorder(desc->chorder,DRIVER->x11fb);
   return 0;
 }
+/**/
 
 /* Trivial pass-thru hooks.
  */
@@ -99,7 +100,7 @@ const struct hostio_video_type hostio_video_type_x11fb={
   .show_cursor=_x11fb_show_cursor,
   .set_fullscreen=_x11fb_set_fullscreen,
   .suppress_screensaver=_x11fb_suppress_screensaver,
-  .fb_describe=_x11fb_fb_describe,
-  .fb_begin=_x11fb_begin,
-  .fb_end=_x11fb_end,
+  //.fb_describe=_x11fb_fb_describe,
+  //.fb_begin=_x11fb_begin,
+  //.fb_end=_x11fb_end,
 };

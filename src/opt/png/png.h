@@ -10,8 +10,7 @@
  *  - Encoding, we put all extra chunks before IDAT. (that might be legal, I'm not sure, maybe some have to go after IDAT?).
  *  - We don't validate CRCs.
  *  - We don't fail on unknown critical chunks.
- *  - Decoding, we accept extra chunks before IHDR. Only it must be before IDAT.
- *  - - Pre-IHDR chunks will be quietly discarded, due to a decoder quirk that would make keeping them inconvenient.
+ *  - Extra chunks before IHDR might be ignored or might be an error, we're inconsistent about that. The spec says error.
  *  - Decoding, we permit missing or short IDAT. Pixels are zero if not touched.
  *  - Decoding, we do not require an IEND.
  */
@@ -48,6 +47,7 @@ int png_image_get_chunk(void *dstpp,const struct png_image *image,const char chu
 /* Rewrite to the given depth and colortype, in place.
  * (image->v) may be freed and re-allocated during the conversion.
  * Stride will always be its minimum after reformat. We'll do only that, if (depth,colortype) already match.
+ * We quickly noop if it's already in this format with minimum stride.
  */
 int png_image_reformat(struct png_image *image,int depth,int colortype);
 
@@ -56,6 +56,12 @@ int png_image_reformat(struct png_image *image,int depth,int colortype);
  * Chunks are encoded just as is, and all before the IDAT chunk.
  */
 int png_encode(struct sr_encoder *dst,const struct png_image *image);
+
+/* Decode only the header. We need the first 26 bytes, no need to supply the rest.
+ * Populates (w,h,stride,depth,colortype,pixelsize).
+ * Does not touch (v,chunkv,chunkc,chunka).
+ */
+int png_decode_header(struct png_image *dst,const void *src,int srcc);
 
 /* Decode PNG file in one shot.
  * All chunks except IHDR,IDAT,IEND are preserved blindly.

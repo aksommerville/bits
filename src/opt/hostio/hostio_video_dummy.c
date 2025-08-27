@@ -9,7 +9,7 @@
  
 struct hostio_video_dummy {
   struct hostio_video hdr;
-  struct hostio_video_fb_description fbdesc;
+  //struct hostio_video_fb_description fbdesc;
   void *fb;
 };
 
@@ -56,7 +56,7 @@ static int _dummy_init(struct hostio_video *driver,const struct hostio_video_set
   driver->cursor_visible=0;
   
   /* If a framebuffer is requested, allocate it and stash the geometry.
-   */
+   *
   if ((setup->fbw>0)&&(setup->fbh>0)) {
     if ((setup->fbw>4096)||(setup->fbh>4096)) return -1;
     DRIVER->fbdesc.w=setup->fbw;
@@ -80,12 +80,13 @@ static int _dummy_init(struct hostio_video *driver,const struct hostio_video_set
     }
     if (!(DRIVER->fb=calloc(DRIVER->fbdesc.stride,DRIVER->fbdesc.h))) return -1;
   }
+  /**/
   
   return 0;
 }
 
 /* Render fences.
- */
+ *
  
 static int _dummy_fb_describe(struct hostio_video_fb_description *desc,struct hostio_video *driver) {
   if (!DRIVER->fb) return -1; // Framebuffer wasn't requested, too late to ask for it.
@@ -106,6 +107,7 @@ static int _dummy_fb_end(struct hostio_video *driver) {
   }
   return 0;
 }
+/**/
 
 /* Type definition.
  */
@@ -131,7 +133,7 @@ const struct hostio_video_type hostio_video_type_dummy={
   // We're leaving the GX ones unset, because we really can't pretend about it.
   //.gx_begin=_dummy_gx_begin,
   //.gx_end=_dummy_gx_end,
-  .fb_describe=_dummy_fb_describe,
-  .fb_begin=_dummy_fb_begin,
-  .fb_end=_dummy_fb_end,
+  //.fb_describe=_dummy_fb_describe,
+  //.fb_begin=_dummy_fb_begin,
+  //.fb_end=_dummy_fb_end,
 };

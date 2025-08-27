@@ -153,6 +153,7 @@ static int _drmfb_init(struct hostio_video *driver,const struct hostio_video_set
 
 /* Framebuffer description.
  */
+#if 0
  
 static void drmfb_2101010_finish(struct hostio_video_fb_description *desc,int alpha) {
   // For 32-bit RGB formats with 10-bit chromas, our big table only sets (rmask), and we figure out the rest here.
@@ -261,9 +262,10 @@ static int _drmfb_fb_describe(struct hostio_video_fb_description *desc,struct ho
   //TODO What does a big-endian host mean to the 16-bit formats?
   return 0;
 }
+#endif
 
 /* Render fences.
- */
+ *
  
 static void *_drmfb_fb_begin(struct hostio_video *driver) {
   return drmfb_begin(DRIVER->drmfb);
@@ -272,6 +274,7 @@ static void *_drmfb_fb_begin(struct hostio_video *driver) {
 static int _drmfb_fb_end(struct hostio_video *driver) {
   return drmfb_end(DRIVER->drmfb);
 }
+/**/
 
 /* Type definition.
  */
@@ -284,7 +287,9 @@ const struct hostio_video_type hostio_video_type_drmfb={
   .provides_input=0,
   .del=_drmfb_del,
   .init=_drmfb_init,
+  /**
   .fb_describe=_drmfb_fb_describe,
   .fb_begin=_drmfb_fb_begin,
   .fb_end=_drmfb_fb_end,
+  /**/
 };
