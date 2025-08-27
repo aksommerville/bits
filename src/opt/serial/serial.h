@@ -88,18 +88,23 @@ int sr_sha1(void *dst,int dsta,const void *src,int srcc);
 
 /* Structured encoder.
  * Caller can yoink (encoder.v), otherwise you must cleanup.
+ * All errors are sticky; you don't need to check every call.
  ****************************************************************/
  
 struct sr_encoder {
   void *v;
   int c,a;
-  int jsonctx; // 0,-1,'[','{'
+  int jsonctx; // 0,-1,'[','{'. Non-JSON functions use it too, as an error flag.
 };
 
 void sr_encoder_cleanup(struct sr_encoder *encoder);
 
 int sr_encoder_require(struct sr_encoder *encoder,int addc);
 int sr_encoder_terminate(struct sr_encoder *encoder);
+static inline int sr_encoder_assert(const struct sr_encoder *encoder) {
+  if (encoder->jsonctx<0) return -1;
+  return 0;
+}
 
 int sr_encode_raw(struct sr_encoder *encoder,const void *src,int srcc);
 int sr_encode_fmt(struct sr_encoder *encoder,const char *fmt,...);
@@ -115,8 +120,6 @@ int sr_encode_intlelen(struct sr_encoder *encoder,const void *src,int srcc,int l
 int sr_encode_vlqlen(struct sr_encoder *encoder,const void *src,int srcc);
 
 /* JSON structures and helpers.
- * All JSON-related errors are sticky: Once something fails, no further JSON calls will succeed.
- * You can safely defer error detection to the end, if that's more convenient.
  *
  * "done" asserts a clean context, ie no structure open and no sticky errors. Not required.
  *

@@ -19,13 +19,14 @@ void sr_encoder_cleanup(struct sr_encoder *encoder) {
  */
 
 int sr_encoder_require(struct sr_encoder *encoder,int addc) {
+  if (encoder->jsonctx<0) return -1;
   if (addc<1) return 0;
   if (encoder->c<=encoder->a-addc) return 0;
-  if (encoder->c>INT_MAX-addc) return -1;
+  if (encoder->c>INT_MAX-addc) return encoder->jsonctx=-1;
   int na=encoder->c+addc;
   if (na<INT_MAX-256) na=(na+256)&~255;
   void *nv=realloc(encoder->v,na);
-  if (!nv) return -1;
+  if (!nv) return encoder->jsonctx-1;
   encoder->v=nv;
   encoder->a=na;
   return 0;
@@ -56,12 +57,13 @@ int sr_encode_raw(struct sr_encoder *encoder,const void *src,int srcc) {
  */
  
 int sr_encode_fmt(struct sr_encoder *encoder,const char *fmt,...) {
+  if (encoder->jsonctx<0) return -1;
   if (!fmt||!fmt[0]) return 0;
   while (1) {
     va_list vargs;
     va_start(vargs,fmt);
     int err=vsnprintf(ENCV+encoder->c,encoder->a-encoder->c,fmt,vargs);
-    if ((err<0)||(err>=INT_MAX)) return -1;
+    if ((err<0)||(err>=INT_MAX)) return encoder->jsonctx=-1;
     if (encoder->c<encoder->a-err) { // sic < not <=
       encoder->c+=err;
       return 0;
@@ -91,7 +93,7 @@ int sr_encode_u8(struct sr_encoder *encoder,int v) {
 }
 
 int sr_encode_intbe(struct sr_encoder *encoder,int v,int size) {
-  if ((size<1)||(size>4)) return -1;
+  if ((size<1)||(size>4)) return encoder->jsonctx=-1;
   if (sr_encoder_require(encoder,size)<0) return -1;
   int i=size; while (i-->0) {
     ENCV[encoder->c+i]=v;
@@ -102,7 +104,7 @@ int sr_encode_intbe(struct sr_encoder *encoder,int v,int size) {
 }
 
 int sr_encode_intle(struct sr_encoder *encoder,int v,int size) {
-  if ((size<1)||(size>4)) return -1;
+  if ((size<1)||(size>4)) return encoder->jsonctx=-1;
   if (sr_encoder_require(encoder,size)<0) return -1;
   int i=size; while (i-->0) {
     ENCV[encoder->c++]=v;
@@ -114,7 +116,7 @@ int sr_encode_intle(struct sr_encoder *encoder,int v,int size) {
 int sr_encode_vlq(struct sr_encoder *encoder,int v) {
   if (sr_encoder_require(encoder,4)<0) return -1;
   int err=sr_vlq_encode(ENCV+encoder->c,encoder->a-encoder->c,v);
-  if ((err<0)||(encoder->c>encoder->a-err)) return -1;
+  if ((err<0)||(encoder->c>encoder->a-err)) return encoder->jsonctx=-1;
   encoder->c+=err;
   return 0;
 }
@@ -124,9 +126,9 @@ int sr_encode_vlq(struct sr_encoder *encoder,int v) {
 
 int sr_encode_intbelen(struct sr_encoder *encoder,const void *src,int srcc,int lenlen) {
   if (!src) srcc=0; else if (srcc<0) { srcc=0; while (((char*)src)[srcc]) srcc++; }
-  if (lenlen>4) return -1;
+  if (lenlen>4) return encoder->jsonctx=-1;
   if (lenlen==4) ;
-  else if (srcc>=1<<(lenlen*8)) return -1;
+  else if (srcc>=1<<(lenlen*8)) return encoder->jsonctx=-1;
   if (sr_encode_intbe(encoder,srcc,lenlen)<0) return -1;
   if (sr_encode_raw(encoder,src,srcc)<0) return -1;
   return 0;
@@ -134,9 +136,9 @@ int sr_encode_intbelen(struct sr_encoder *encoder,const void *src,int srcc,int l
 
 int sr_encode_intlelen(struct sr_encoder *encoder,const void *src,int srcc,int lenlen) {
   if (!src) srcc=0; else if (srcc<0) { srcc=0; while (((char*)src)[srcc]) srcc++; }
-  if (lenlen>4) return -1;
+  if (lenlen>4) return encoder->jsonctx=-1;
   if (lenlen==4) ;
-  else if (srcc>=1<<(lenlen*8)) return -1;
+  else if (srcc>=1<<(lenlen*8)) return encoder->jsonctx=-1;
   if (sr_encode_intle(encoder,srcc,lenlen)<0) return -1;
   if (sr_encode_raw(encoder,src,srcc)<0) return -1;
   return 0;
