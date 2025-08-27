@@ -26,7 +26,7 @@
 #define PRINT_MISMATCH_COMPARISONS 0
 
 // Dump all outcomes, and encoded sizes where successful.
-#define PRINT_BIG_REPORT 1
+#define PRINT_BIG_REPORT 0
 
 // Instead of encoded sizes, print ratio to original input file size.
 #define PRINT_RELATIVE_SIZES 0
