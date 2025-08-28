@@ -71,6 +71,7 @@ void inmgr_event(int devid,int btnid,int value);
  */
 void *inmgr_connect_begin(int devid,int vid,int pid,int version,const char *name,int namec);
 void inmgr_connect_more(void *ctx,int btnid,int hidusage,int lo,int hi,int value);
+void inmgr_connect_keyboard(void *ctx); // Instead of a hundred "more", call this once to assume a sensible HID keyboard.
 int inmgr_connect_end(void *ctx);
 
 /* Notify us that a device is no longer available.

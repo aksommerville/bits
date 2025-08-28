@@ -52,3 +52,23 @@ Things we can copy, try to keep them self-contained.
 - [ ] Windows: qjs, wamr, jpeg
 - [ ] MacOS: qjs, wamr, jpeg
 - [ ] MacOS: Incorporate IoC in hostio? How is this going to work?
+
+- [ ] Integrate existing games with gcfg (and inmgr if we don't already have that managed):
+- - [x] shovel +inmgr
+- - - [ ] opener
+- - - [ ] ninelives
+- - [ ] ra3
+- - [ ] egg2 +inmgr
+- - [ ] egg1
+- - [ ] pokorc
+- - [ ] lilsitter
+- - [ ] ivand
+- - [ ] chetyorska
+- - [ ] ctm
+- - [ ] ecom
+- - [ ] fullmoon4
+- - [ ] pebble
+- - [ ] plundersquad
+- - [ ] sitter2009
+- - [ ] tooheavy
+- - [ ] ttaq

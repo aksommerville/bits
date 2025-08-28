@@ -336,6 +336,11 @@ void inmgr_connect_more(void *ctx,int btnid,int hidusage,int lo,int hi,int value
   inmgr_unset_add(btnid,hidusage,lo,hi,value);
 }
 
+void inmgr_connect_keyboard(void *ctx) {
+  if (!ctx||(ctx!=inmgr.connect_in_progress)) return;
+  inmgr.connect.device->keyboard=1;
+}
+
 /* Special assign-unset logic for keyboards only.
  */
  
@@ -621,11 +626,12 @@ static void inmgr_device_remove_modeless(struct inmgr_device *device) {
  */
  
 static int inmgr_device_detect_keyboard(struct inmgr_device *device,const struct inmgr_unset *unset,int unsetc) {
+  if (device->keyboard) return 0;
   int page7c=0,totalc=device->buttonc+unsetc,i;
   const struct inmgr_button *button=device->buttonv;
   for (i=device->buttonc;i-->0;button++) if ((button->srcbtnid&0x00070000)==0x00070000) page7c++;
   for (;unsetc-->0;unset++) if ((unset->btnid&0x00070000)==0x00070000) page7c++;
-  if (page7c>=40) return 1;
+  if (page7c>=40) device->keyboard=1;
   return 0;
 }
 
