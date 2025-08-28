@@ -36,7 +36,7 @@ int gcfg_write_file(const char *app,int appc,const char *base,int basec,const vo
  * Config file is zero or more device blocks, eg:
  *   >>> 1234 0001 0000 "Acme Widget Co. Heavy Duty Gamepad"
  *   30010 HORZ
- *   30011 VERT positiveup
+ *   30011 VERT reverse
  *   10120 SOUTH "A"
  *   10121 WEST "B"
  * Each button can have a quoted name, and loose text commentary.
