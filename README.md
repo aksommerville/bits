@@ -31,7 +31,7 @@ Things we can copy, try to keep them self-contained.
 - `wamr`: wasm-micro-runtime adapter.
 - `http`: HTTP+WebSocket client and server, for dev tooling. Don't use on the public internet.
 - `curlwrap`: Wrapper around libcurl for HTTP and (experimental) WebSocket. Safe for real-world use.
-- `gcfg`: Manage global config files, esp input devices. I want to get off per-program input config.
+- `gcfg`: DEPRECATED Manage global config files, esp input devices. I want to get off per-program input config.
 - `inmgr`: Generic input manager, savvy to gcfg, producing multiple 16-bit player states.
 
 ## TODO
@@ -53,10 +53,12 @@ Things we can copy, try to keep them self-contained.
 - [ ] MacOS: qjs, wamr, jpeg
 - [ ] MacOS: Incorporate IoC in hostio? How is this going to work?
 
+- [x] Revise gcfg+inmgr... Use the same button symbols, including saving the config file, other things added in Romassist.
+- - Make it just one unit.
 - [ ] Integrate existing games with gcfg (and inmgr if we don't already have that managed):
 - - [x] shovel +inmgr
-- - - [ ] opener
-- - - [ ] ninelives
+- - - [x] opener
+- - - [x] ninelives
 - - [ ] ra3
 - - [ ] egg2 +inmgr
 - - [ ] egg1

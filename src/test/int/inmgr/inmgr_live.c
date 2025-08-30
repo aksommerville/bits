@@ -19,7 +19,7 @@ static void rcvsig(int sigid) {
 }
 
 static int cb_cap(int btnid,int hidusage,int lo,int hi,int value,void *userdata) {
-  inmgr_connect_more(userdata,btnid,hidusage,lo,hi,value);
+  inmgr_connect_more(*(int*)userdata,btnid,hidusage,lo,hi,value);
   return 0;
 }
  
@@ -31,17 +31,9 @@ static void cb_connect(struct hostio_input *driver,int devid) {
   }
   int vid=0,pid=0,version=0;
   const char *name=driver->type->get_ids(&vid,&pid,&version,driver,devid);
-  void *ctx=inmgr_connect_begin(devid,vid,pid,version,name,-1);
-  if (!ctx) {
-    fprintf(stderr,"!!! null from inmgr_connect_begin\n");
-    return;
-  }
-  driver->type->for_each_button(driver,devid,cb_cap,ctx);
-  if (inmgr_connect_end(ctx)>0) {
-    fprintf(stderr,"DEVICE READY: %04x:%04x:%04x '%s'\n",vid,pid,version,name);
-  } else {
-    fprintf(stderr,"DEVICE NOT USABLE: %04x:%04x:%04x '%s'\n",vid,pid,version,name);
-  }
+  inmgr_connect_begin(devid,vid,pid,version,name,-1);
+  driver->type->for_each_button(driver,devid,cb_cap,&devid);
+  inmgr_connect_end(devid);
 }
 
 static void cb_disconnect(struct hostio_input *driver,int devid) {
@@ -66,8 +58,8 @@ XXX_ITEST(inmgr_live) {
 
   ASSERT_CALL(inmgr_init())
   inmgr_set_player_count(2);
-  inmgr_set_buttons(0xffff); // This is the default anyway.
-  inmgr_set_signal(INMGR_SIGNAL_QUIT,cb_quit);
+  inmgr_set_button_mask(0xffff); // This is the default anyway.
+  inmgr_set_signal(INMGR_BTN_QUIT,cb_quit);
 
   struct hostio_input_delegate input_delegate={
     .cb_connect=cb_connect,
