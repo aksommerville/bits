@@ -74,7 +74,7 @@ static void inmgr_button_update(struct inmgr_device *device,struct inmgr_button 
         int dstvalue=((srcvalue>=button->srclo)&&(srcvalue<=button->srchi))?1:0;
         if (dstvalue==button->dstvalue) return;
         button->dstvalue=dstvalue;
-        if (dstvalue) inmgr_signal(button->dstbtnid);
+        if (dstvalue&&device->enable) inmgr_signal(button->dstbtnid);
       } break;
       
     case INMGR_BUTTON_MODE_TWOSTATE: {

@@ -55,22 +55,23 @@ Things we can copy, try to keep them self-contained.
 
 - [x] Revise gcfg+inmgr... Use the same button symbols, including saving the config file, other things added in Romassist.
 - - Make it just one unit.
-- [ ] Integrate existing games with gcfg (and inmgr if we don't already have that managed):
+- [x] Integrate existing games with inmgr
+- - ...ok, I've taken that about as far as I care to. The ones remaining look complicated. We've got Shovel, Romassist, and the last two Eggs, so that's most games.
 - - [x] shovel +inmgr
 - - - [x] opener
 - - - [x] ninelives
-- - [ ] ra3
-- - [ ] egg2 +inmgr
-- - [ ] egg1
-- - [ ] pokorc
-- - [ ] lilsitter
-- - [ ] ivand
-- - [ ] chetyorska
-- - [ ] ctm
-- - [ ] ecom
-- - [ ] fullmoon4
+- - [x] ra3
+- - [x] egg2 +inmgr
+- - [x] egg1
+- - [x] pokorc
+- - [x] lilsitter
+- - [x] ivand
+- - [ ] chetyorska... not bothering; it's really meant for MIDI only.
+- - [ ] ctm... going to be tricky
+- - [x] ecom
+- - [ ] fullmoon4... tricky
 - - [ ] pebble
-- - [ ] plundersquad
-- - [ ] sitter2009
-- - [ ] tooheavy
-- - [ ] ttaq
+- - [ ] plundersquad... tricky
+- - [ ] sitter2009... oh dear is this tricky
+- - [ ] tooheavy... PUNT. I'm strongly leaning toward rewriting this, once egg2 is stable. Currently runs on egg-202405, where it runs at all. Don't touch it, don't breathe on it.
+- - [ ] ttaq... Lots of quirky abstractions here already, it's going to be painful.
